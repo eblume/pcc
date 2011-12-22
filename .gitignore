@@ -1,0 +1,17 @@
+# Ignore OS X files
+.DS_Store
+
+# Ignore vim/emacs swap files
+*~
+.*.swp
+
+# Ignore python cache stuff
+*.pyc
+*/__pycache__/*
+
+
+# Ignore the setuptools build & test items
+/build
+*.egg-info
+.coverage
+
