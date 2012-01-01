@@ -6,7 +6,7 @@ _token_ident = re.compile(r'[a-zA-Z][_a-zA-Z0-0]*')
 class Lexer:
     r"""Create, modify, and execute a regular-expression lexing tokenizer.
 
-    >>> p = Lexer()
+    >>> p = Lexer(report_literals = True)
     >>> p.addtoken('NAME',r'[_a-zA-Z][_a-zA-Z0-9]+')
     >>> p.addtoken('NUMBER',r'[0-9]+')
     >>> p.addtoken('REAL_NUMBER',r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
@@ -14,7 +14,7 @@ class Lexer:
     >>> input = '''42 is a number
     ... 3.14159
     ... _Long_Identifier_ banana
-    ... ocelot
+    ... ocelot!!
     ... '''
     >>> for token in p.lex(input):
     ...     print("{} > {} | {},{}".format(token.name, token.match,
@@ -26,36 +26,47 @@ class Lexer:
     NAME > _Long_Identifier_ | 3,0
     NAME > banana | 3,18
     NAME > ocelot | 4,0
+    LITERAL > ! | 4,6
+    LITERAL > ! | 4,7
 
     """
 
-    def __init__(self, ignorewhitespace=True, ignorenewlines=True):
+    def __init__(self, ignore_whitespace=True, ignore_newlines=True,
+                 report_literals=False):
         r"""Create a new Lexer object.
 
-        If `ignorewhitespace` is left True, a token called WHITESPACE will
+        If `ignore_whitespace` is left True, a token called WHITESPACE will
         be created with the rule r"\s+" with the `silent` option on - the
         effect of which is that bare whitespace will be effectively stripped
-        from the input. Note that this overrides `ignorenewlines`.
+        from the input. Note that this overrides `ignore_newlines`.
 
-        If `ignorenewlines` is left True but `ignorewhitespace` is False, then
+        If `ignore_newlines` is left True but `ignore_whitespace` is False, then
         a new token called NEWLINE will be added with the rule r"[\n]+" and the
         `silent` option on.
 
         For either of these whitespace-skipping rules, keep in mind that you
         can still have tokens with whitespace due to the greedy nature of
         pattern matching.
+
+        If `report_literals` is True, then in the case that no token matches the
+        current input sequence, rather than raising an error, a token with the
+        name 'LITERAL' will be created with the next character of input (and
+        only one character).
         """
         self.tokens = {}
-        if ignorewhitespace:
+        if ignore_whitespace:
             self.addtoken('WHITESPACE',r'\s+', silent=True)
-        elif ignorenewlines:
+        elif ignore_newlines:
             self.addtoken('NEWLINE',r'[\n]+', silent=True)
+
+        self.literals = report_literals
 
     def addtoken(self,name,rule, silent=False):
         """Add a token-generating rule.
 
         `name` is a unique (to this Lexer) identifier which must match the
-        regular expression "[a-zA-Z][_a-zA-Z0-9]*". 
+        regular expression "[a-zA-Z][_a-zA-Z0-9]*" - it may also not be named
+        'LITERAL', as this is reserved.
 
         `rule` is a regular expression in a string (preferably a 'raw' string,
         but that's up to the user) that will be passed to re.match to find a
@@ -70,7 +81,7 @@ class Lexer:
         token as output.
         """
 
-        if not _token_ident.match(name):
+        if name == "LITERAL" or not _token_ident.match(name):
             raise ValueError('Token name {} is invalid.'.format(name))
 
         if name in self.tokens:
@@ -111,16 +122,23 @@ class Lexer:
             # Prune out all non-matches and 0-length matches
             matches = [ x for x in matches if x[1] and len(x[1].group(0)) > 0]
             if len(matches) == 0:
-                raise ValueError('No token was found at line {} position {}.'
-                                 .format(line,line_pos))
-            # Sort the matches by match length, descending.
-            matches.sort(
-                         reverse= True,
-                         key= lambda x: len(x[1].group(0))
-                        )
-
-            match_name, match_object, silent = matches[0]
-            match_text = match_object.group(0)
+                if self.literals:
+                    # Inject a fake 'LITERAL' token
+                    match_name = 'LITERAL'
+                    silent = False
+                    match_text = input[position]
+                else:
+                    raise ValueError('No token was found at line {} position '
+                                     '{}.'.format(line,line_pos))
+            else:
+                # Sort the matches by match length, descending.
+                matches.sort(
+                             reverse= True,
+                             key= lambda x: len(x[1].group(0))
+                            )
+    
+                match_name, match_object, silent = matches[0]
+                match_text = match_object.group(0)
 
             if not silent:
                 yield Token(match_name,match_text,line,line_pos)
