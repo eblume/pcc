@@ -35,15 +35,15 @@ Ullman.
 from abc import ABCMeta,abstractmethod
 
 class GrammarError(Exception):
-    """Exception raised by a parser.Parser object *before* parsing begins."""
+    "Exception raised by a ``parser.Parser`` object *before* parsing begins."
     pass
 
 class SyntaxError(Exception):
-    "Exception raised by a parser.Parser object when a syntax error occurs."
+    "Exception raised by a ``parser.Parser`` object when a syntax error occurs."
     pass
 
 def parser():
-    """Create a parser.Parser object using the default algorithm."""
+    """Create a ``parser.Parser`` object using the default algorithm."""
         
 
 class Parser(metaclass=ABCMeta):
@@ -64,37 +64,43 @@ class Parser(metaclass=ABCMeta):
     LALR parsers which might work stepwise - this is because this class takes
     advantage of python generator functions.
 
-    The following example emulates this simple grammar (in bison/YACC form:)
+    The following example emulates this simple grammar (in bison/YACC form)::
 
-    expr : expr '+' term   { $$ = $1 + $3; }
-         | expr '-' term   { $$ = $1 - $3; }
-         | term            { $$ = $1; }
-         ;
+        expr : expr '+' term   { $$ = $1 + $3; }
+             | expr '-' term   { $$ = $1 - $3; }
+             | term            { $$ = $1; }
+             ;
+        
+        term : '(' expr ')'    { $$ = $2; }
+             | num             { $$ = $1; }
+             ;
     
-    term : '(' expr ')'    { $$ = $2; }
-         | num             { $$ = $1; }
-         ;
+        num : '0'              {$$ = 0; }
+            | '1'              {$$ = 1; }
+            [.... etc, for each number 0-0 ....]
+            ;
 
-    num : '0'              {$$ = 0; }
-        | '1'              {$$ = 1; }
-        [.... etc, for each number 0-0 ....]
-        ;
+    Note: the code below has been 'mangled' in formatting to avoid a minor test
+    issue present in this early build. I apologze for its ugliness, it will be
+    fixed shortly.
 
-    >> l = Lexer()
-    >> l.addtoken('NUMBER',r'[0-9]+')
-    >> p = parser(l)
-    >>
-    >> p.addrule('prog', "expr", lambda v: print(v[0]))
-    >> 
-    >> p.addrule('expr', "expr '+' term", lambda v: v[0] + v[2])
-    >> p.addrule('expr', "expr '-' term", lambda v: v[0] - v[2])
-    >> p.addrule('expr', "term", lambda v: v[0])
-    >>
-    >> p.addrule('term', " '(' expr ')' ", lambda v: v[1])
-    >> p.addrule('term', " NUMBER ", lambda v: v[0])
-    >>
-    >> p.parse("5-(9+2)")
-    -6
+    ::
+
+        >> l = Lexer()
+        >> l.addtoken('NUMBER',r'[0-9]+')
+        >> p = parser(l)
+        >>
+        >> p.addrule('prog', "expr", lambda v: print(v[0]))
+        >> 
+        >> p.addrule('expr', "expr '+' term", lambda v: v[0] + v[2])
+        >> p.addrule('expr', "expr '-' term", lambda v: v[0] - v[2])
+        >> p.addrule('expr', "term", lambda v: v[0])
+        >>
+        >> p.addrule('term', " '(' expr ')' ", lambda v: v[1])
+        >> p.addrule('term', " NUMBER ", lambda v: v[0])
+        >>
+        >> p.parse("5-(9+2)")
+        -6
 
     """
 
@@ -105,17 +111,17 @@ class Parser(metaclass=ABCMeta):
         via `action`.
 
         `symbol` is a string that must match the regular expression
-            r'[a-zA-Z]+'
-        Note that it is not allowed for a symbol to have the same name as
-        a token that might be produced by the lexer. Therefor, if you try
-        to add a rule with a `symbol` that is already the name of a token,
-        ValueError will be raised immediatly, and the rule will not be added.
+        ``r'[a-zA-Z]+'``. Note that it is not allowed for a symbol to have the
+        same name as a token that might be produced by the lexer. Therefor, if
+        you try to add a rule with a `symbol` that is already the name of a
+        token, ValueError will be raised immediatly, and the rule will not be
+        added.
 
         `rule` is a string that has whitespace seperated terminal and
         nonterminal symbols (see below). It may also be a list of such strings
         (with all whitespace stripped). In other words, if the rule is
-            "foo '*' bar"
-        you could equivalently use rule.split() - both work just as well.
+        ``"foo '*' bar"`` you could equivalently use rule.split() - both work
+        just as well.
 
         `action` is a function (often a lambda expression, but there is no
         such requirement) that takes a list as input and may return some value.
@@ -138,14 +144,14 @@ class Parser(metaclass=ABCMeta):
         'symbols' (or a list of symbols). A symbol is defined as either:
 
         1. All of the named tokens in the lexer, which have names conforming to
-          the regex found in lexer._token_ident (at this writing,
-          r'[a-zA-Z][_a-zA-Z0-9]*').
+           the regex found in lexer._token_ident (at this writing,
+           ``r'[a-zA-Z][_a-zA-Z0-9]*'``).
         2. String literals, which are identified in the rule as any single
-          character between two single quotes (including, possibly, a single
-          quote itself - which would be three single quotes one after another.)
+           character between two single quotes (including, possibly, a single
+           quote itself - which would be three single quotes one after another.)
         3. Any nonterminal symbol (see below), although keep in mind that all
-          nonterminal symbols must have at least one derivation before parsing
-          can commense.
+           nonterminal symbols must have at least one derivation before parsing
+           can commense.
 
         1 and 2 describe "terminal symbols", in that they have no derivations
         and exist directly in the input stream. 3, the nontermimal symbols,

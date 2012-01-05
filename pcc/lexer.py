@@ -23,52 +23,52 @@ import re
 _token_ident = re.compile(r'[a-zA-Z][_a-zA-Z0-0]*')
 
 class Lexer:
+    r"""Create a new Lexer object.
+
+    If `ignore_whitespace` is left True, a token called WHITESPACE will
+    be created with the rule ``r"\s+"`` with the `silent` option on - the
+    effect of which is that bare whitespace will be effectively stripped
+    from the input. Note that this overrides `ignore_newlines`.
+
+    If `ignore_newlines` is left True but `ignore_whitespace` is False, then
+    a new token called NEWLINE will be added with the rule ``r"[\n]+"`` and
+    the `silent` option on.
+
+    For either of these whitespace-skipping rules, keep in mind that you
+    can still have tokens with whitespace due to the greedy nature of
+    pattern matching.
+
+    If `report_literals` is True, then in the case that no token matches the
+    current input sequence, rather than raising an error, a token with the
+    name ``'LITERAL'`` will be created with the next character of input (and
+    only one character).
+
+    >>> p = Lexer()
+    >>> p.addtoken('NAME',r'[_a-zA-Z][_a-zA-Z0-9]+')
+    >>> p.addtoken('NUMBER',r'[0-9]+')
+    >>> p.addtoken('REAL_NUMBER',r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
+    >>> p.addtoken('TWO_WORDS',r'[a-zA-Z]+ [a-zA-Z]+')
+    >>> input = '''42 is a number
+    ... 3.14159
+    ... _Long_Identifier_ banana
+    ... ocelot!!
+    ... '''
+    >>> for token in p.lex(input):
+    ...     print("{} > {} | {},{}".format(token.name, token.match,
+    ...                                    token.line, token.position))
+    NUMBER > 42 | 1,0
+    TWO_WORDS > is a | 1,3
+    NAME > number | 1,8
+    REAL_NUMBER > 3.14159 | 2,0
+    NAME > _Long_Identifier_ | 3,0
+    NAME > banana | 3,18
+    NAME > ocelot | 4,0
+    LITERAL > ! | 4,6
+    LITERAL > ! | 4,7
+
+    """
     def __init__(self, ignore_whitespace=True, ignore_newlines=True,
                  report_literals=True):
-        r"""Create a new Lexer object.
-
-        If `ignore_whitespace` is left True, a token called WHITESPACE will
-        be created with the rule r"\s+" with the `silent` option on - the
-        effect of which is that bare whitespace will be effectively stripped
-        from the input. Note that this overrides `ignore_newlines`.
-
-        If `ignore_newlines` is left True but `ignore_whitespace` is False, then
-        a new token called NEWLINE will be added with the rule r"[\n]+" and the
-        `silent` option on.
-
-        For either of these whitespace-skipping rules, keep in mind that you
-        can still have tokens with whitespace due to the greedy nature of
-        pattern matching.
-
-        If `report_literals` is True, then in the case that no token matches the
-        current input sequence, rather than raising an error, a token with the
-        name 'LITERAL' will be created with the next character of input (and
-        only one character).
-
-        >>> p = Lexer()
-        >>> p.addtoken('NAME',r'[_a-zA-Z][_a-zA-Z0-9]+')
-        >>> p.addtoken('NUMBER',r'[0-9]+')
-        >>> p.addtoken('REAL_NUMBER',r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
-        >>> p.addtoken('TWO_WORDS',r'[a-zA-Z]+ [a-zA-Z]+')
-        >>> input = '''42 is a number
-        ... 3.14159
-        ... _Long_Identifier_ banana
-        ... ocelot!!
-        ... '''
-        >>> for token in p.lex(input):
-        ...     print("{} > {} | {},{}".format(token.name, token.match,
-        ...                                    token.line, token.position))
-        NUMBER > 42 | 1,0
-        TWO_WORDS > is a | 1,3
-        NAME > number | 1,8
-        REAL_NUMBER > 3.14159 | 2,0
-        NAME > _Long_Identifier_ | 3,0
-        NAME > banana | 3,18
-        NAME > ocelot | 4,0
-        LITERAL > ! | 4,6
-        LITERAL > ! | 4,7
-
-        """
         self.tokens = {}
         if ignore_whitespace:
             self.addtoken('WHITESPACE',r'\s+', silent=True)
@@ -81,13 +81,13 @@ class Lexer:
         """Add a token-generating rule.
 
         `name` is a unique (to this Lexer) identifier which must match the
-        regular expression "[a-zA-Z][_a-zA-Z0-9]*" - it may also not be named
-        'LITERAL', as this is reserved. Classically (and to help avoid
-        conflicts with parser symbols), all tokens should be named in all
+        regular expression ``"[a-zA-Z][_a-zA-Z0-9]*"`` - it may also not be
+        named ``'LITERAL'``, as this is reserved. Classically (and to help
+        avoid conflicts with parser symbols), all tokens should be named in all
         capitals with underscores between words.
 
         `rule` is a regular expression in a string (preferably a 'raw' string,
-        but that's up to the user) that will be passed to re.match to find a
+        but that's up to the user) that will be passed to ``re.match`` to find a
         token. Avoid using complex regular expressions to avoid breaking the
         system - try to just use literals, literal groups, and quantifiers, and
         definitely do not use position metacharacters like "^" and "$" or back-
