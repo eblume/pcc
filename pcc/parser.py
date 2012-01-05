@@ -59,7 +59,7 @@ class Parser(metaclass=ABCMeta):
 
     Use ``addrule`` to add rules with semantic actions. Use ``parse`` to
     execute parsing. Parsing is immediate and returns no value, unlike other
-    LALR parsers which might work stepwise - this is because this class takes
+    parsers which might work stepwise - this is because this class takes
     advantage of python generator functions.
 
     The following example emulates this simple grammar (in bison/YACC form)::
@@ -75,7 +75,7 @@ class Parser(metaclass=ABCMeta):
     
         num : '0'              {$$ = 0; }
             | '1'              {$$ = 1; }
-            [.... etc, for each number 0-0 ....]
+            [.... etc, for each number 0-9 ....]
             ;
 
     Note: the code below has been 'mangled' in formatting to avoid a minor test
