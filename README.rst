@@ -69,11 +69,11 @@ Documentation
 -------------
 
 Please see "pcc.pdf" at the root project directory for the complete
-documentation. The ``doc`` folder can be ignored unless you wish to edit or
+documentation. The ``docs`` directory can be ignored unless you wish to edit or
 regenerate the documentation from the source.
 
 To regenerate the documentation (generally only performed by me before a
-release), go to the ``doc`` directory and execute the following command::
+release), go to the ``docs`` directory and execute the following command::
 
     $ make pcc
 
