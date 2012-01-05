@@ -79,7 +79,7 @@ release), go to the ``docs`` directory and execute the following command::
 
     $ make pcc
 
-This will automatically (using `Sphynx <http://sphinx.pocoo.org/>`_) scan the
+This will automatically (using `Sphinx <http://sphinx.pocoo.org/>`_) scan the
 source code, build the API documentation in to ReStructuredText, transcribe the
 docs to LaTeX, and compile the LaTeX source in to "pcc.pdf" at the project's
 root directory.
