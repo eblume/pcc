@@ -135,8 +135,7 @@ class Parser(metaclass=ABCMeta):
         parsing, although you can use a symbol in a new rule before it has
         a derivation (so long as you eventually give it a derivation).
 
-        Terminal and Nonterminal Symbols
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        **Terminal and Nonterminal Symbols**
 
         Recall that the `rule` parameter is a whitespace-seperated strings of
         'symbols' (or a list of symbols). A symbol is defined as either:
