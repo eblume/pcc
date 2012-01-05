@@ -64,7 +64,9 @@ class Lexer:
 
         `name` is a unique (to this Lexer) identifier which must match the
         regular expression "[a-zA-Z][_a-zA-Z0-9]*" - it may also not be named
-        'LITERAL', as this is reserved.
+        'LITERAL', as this is reserved. Classically (and to help avoid
+        conflicts with parser symbols), all tokens should be named in all
+        capitals with underscores between words.
 
         `rule` is a regular expression in a string (preferably a 'raw' string,
         but that's up to the user) that will be passed to re.match to find a
