@@ -1,3 +1,4 @@
+"""lexer.py - Tokenize lexemes from strings, similar to F/Lex, but Pythonic."""
 
 import re
 
@@ -26,7 +27,7 @@ class Lexer:
         name 'LITERAL' will be created with the next character of input (and
         only one character).
 
-        >>> p = Lexer(report_literals = True)
+        >>> p = Lexer()
         >>> p.addtoken('NAME',r'[_a-zA-Z][_a-zA-Z0-9]+')
         >>> p.addtoken('NUMBER',r'[0-9]+')
         >>> p.addtoken('REAL_NUMBER',r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
