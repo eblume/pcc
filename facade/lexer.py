@@ -4,35 +4,8 @@ import re
 _token_ident = re.compile(r'[a-zA-Z][_a-zA-Z0-0]*')
 
 class Lexer:
-    r"""Create, modify, and execute a regular-expression lexing tokenizer.
-
-    >>> p = Lexer(report_literals = True)
-    >>> p.addtoken('NAME',r'[_a-zA-Z][_a-zA-Z0-9]+')
-    >>> p.addtoken('NUMBER',r'[0-9]+')
-    >>> p.addtoken('REAL_NUMBER',r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
-    >>> p.addtoken('TWO_WORDS',r'[a-zA-Z]+ [a-zA-Z]+')
-    >>> input = '''42 is a number
-    ... 3.14159
-    ... _Long_Identifier_ banana
-    ... ocelot!!
-    ... '''
-    >>> for token in p.lex(input):
-    ...     print("{} > {} | {},{}".format(token.name, token.match,
-    ...                                    token.line, token.position))
-    NUMBER > 42 | 1,0
-    TWO_WORDS > is a | 1,3
-    NAME > number | 1,8
-    REAL_NUMBER > 3.14159 | 2,0
-    NAME > _Long_Identifier_ | 3,0
-    NAME > banana | 3,18
-    NAME > ocelot | 4,0
-    LITERAL > ! | 4,6
-    LITERAL > ! | 4,7
-
-    """
-
     def __init__(self, ignore_whitespace=True, ignore_newlines=True,
-                 report_literals=False):
+                 report_literals=True):
         r"""Create a new Lexer object.
 
         If `ignore_whitespace` is left True, a token called WHITESPACE will
@@ -52,6 +25,30 @@ class Lexer:
         current input sequence, rather than raising an error, a token with the
         name 'LITERAL' will be created with the next character of input (and
         only one character).
+
+        >>> p = Lexer(report_literals = True)
+        >>> p.addtoken('NAME',r'[_a-zA-Z][_a-zA-Z0-9]+')
+        >>> p.addtoken('NUMBER',r'[0-9]+')
+        >>> p.addtoken('REAL_NUMBER',r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
+        >>> p.addtoken('TWO_WORDS',r'[a-zA-Z]+ [a-zA-Z]+')
+        >>> input = '''42 is a number
+        ... 3.14159
+        ... _Long_Identifier_ banana
+        ... ocelot!!
+        ... '''
+        >>> for token in p.lex(input):
+        ...     print("{} > {} | {},{}".format(token.name, token.match,
+        ...                                    token.line, token.position))
+        NUMBER > 42 | 1,0
+        TWO_WORDS > is a | 1,3
+        NAME > number | 1,8
+        REAL_NUMBER > 3.14159 | 2,0
+        NAME > _Long_Identifier_ | 3,0
+        NAME > banana | 3,18
+        NAME > ocelot | 4,0
+        LITERAL > ! | 4,6
+        LITERAL > ! | 4,7
+
         """
         self.tokens = {}
         if ignore_whitespace:
