@@ -8,7 +8,7 @@ value as the result for that expression.
 
 Use the helper method ``parser()`` to create a Parser object if you don't
 care about what algorithm it will use. Otherwise, you cannot instantiate a
-Parser object directly, but must instead use on of its subclasses, each of
+Parser object directly, but must instead use one of its subclasses, each of
 which uses a slightly different algorithm. (It is the author's plan to use this
 setup as a way to read through the 'Purple Dragon Book' - Aho, Lam, Sethi, and
 Ullman.
