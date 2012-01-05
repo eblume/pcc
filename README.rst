@@ -63,7 +63,9 @@ To execute the full testing suite, enter the following command::
 
     $ python3 setup.py nosetests
 
-No errors should be reported by this process.
+No errors should be reported by this process. Also note that while setuptools
+may report that there is a ``tests`` command, this has not been configured - use
+``nosetests`` instead.
 
 Documentation
 -------------
