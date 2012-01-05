@@ -9,7 +9,7 @@ use_setuptools()
 from setuptools import setup, find_packages
 
 sys.path.insert(0,'.')
-from facade import VERSION_INFO
+from pcc import VERSION_INFO
 
 
 # The following is taken from python.org:
@@ -22,7 +22,7 @@ def read(fname):
 
 
 setup(
-    name = 'facade',
+    name = 'pcc',
     version = VERSION_INFO[1],
     packages = find_packages(),
     scripts = glob.glob(os.path.join(os.path.dirname(__file__),'scripts/*')),
@@ -44,10 +44,11 @@ setup(
 
     author = 'Erich Blume',
     author_email = 'blume.erich@gmail.com',
-    description = ('Alternative syntax preprocessor for ANSI C'),
+    description = ('CFG parsing for Python 3'),
     license = 'GPLv3',
-    keywords = 'C syntax grammar CFG parser preprocessor language',
-    url = 'https://github.com/eblume/facade',
-    download_url='https://github.com/eblume/facade/tarball/master',
+    keywords = 'syntax grammar CFG parser preprocessor language compiler',
+    url = 'https://github.com/eblume/pcc',
+    download_url='https://github.com/eblume/pcc/tarball/master',
     long_description = read('README.rst'),
 )
+
