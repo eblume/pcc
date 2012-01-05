@@ -10,7 +10,7 @@ ways, but most easily by going to the project root dir and executing
 
 import unittest
 
-import facade.lexer as fl
+import pcc.lexer as fl
 
 class LexerTester(unittest.TestCase):
     """Test harness for ``facade.lexer.Lexer`` class.
