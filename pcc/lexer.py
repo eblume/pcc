@@ -69,7 +69,7 @@ class Lexer:
     """
     def __init__(self, ignore_whitespace=True, ignore_newlines=True,
                  report_literals=True):
-        self.tokens = {}
+        self.tokens = {"LITERAL": None}
         if ignore_whitespace:
             self.addtoken('WHITESPACE',r'\s+', silent=True)
         elif ignore_newlines:
@@ -99,7 +99,7 @@ class Lexer:
         token as output.
         """
 
-        if name == "LITERAL" or not _token_ident.match(name):
+        if not _token_ident.match(name):
             raise ValueError('Token name {} is invalid.'.format(name))
 
         if name in self.tokens:
@@ -136,7 +136,9 @@ class Lexer:
         while position < end:
                       # This is a tuple (name,match_object,silent_flag)
             matches = [ (name, matcher[0].match(input,position),matcher[1])
-                       for name, matcher in self.tokens.items()]
+                       for name, matcher in self.tokens.items()
+                       if matcher is not None  # don't process "LITERAL"
+                      ]
             # Prune out all non-matches and 0-length matches
             matches = [ x for x in matches if x[1] and len(x[1].group(0)) > 0]
             if len(matches) == 0:
