@@ -1,7 +1,7 @@
 """ parser.py - CFG parsing with python functions as semantic actions
 
 Create Parser objects, which take tokenized input (via lexer.py) and use
-different parsing methods to synthesize BNF rules in to productions with
+different parsing methods to synthesize BNF grammars in to productions with
 semantic python actions. All semantic actions are python functions that take a
 list as an argument (representing the values of sub-expressions) and return a
 value as the result for that expression.
@@ -45,22 +45,22 @@ def parser():
         
 
 class Parser(metaclass=ABCMeta):
-    """CFG parser of arbitrary BNF-like rules.
+    """CFG parser of arbitrary BNF-like grammars.
 
     Actual implementations should subclass this abstract base class, and may
     have slightly different levels of 'computational power'. That is to say,
     an LL language is slightly less expressive than an SLR, which is less
     expressive than an LALR, which is less expressive than an LR language.
     All are essentially 'context free grammars'. If a parser encounters an
-    error before parsing has begun (ie. an error with a rule) then
+    error before parsing has begun (ie. an error with a production) then
     ``parser.GrammarError`` should be raised. If a parser encounters a syntax
     error during parsing, then ``parser.SyntaxError`` should be raised. Other
     errors should be reported in the most reasonably expressive manner possible.
 
-    Use ``addrule`` to add rules with semantic actions. Use ``parse`` to
-    execute parsing. Parsing is immediate and returns no value, unlike other
-    parsers which might work stepwise - this is because this class takes
-    advantage of python generator functions.
+    Use ``addproduction`` to add productions with semantic actions. Use
+    ``parse`` to execute parsing. Parsing is immediate and returns no value,
+    unlike other parsers which might work stepwise - this is because this class
+    takes advantage of python generator functions.
 
     The following example emulates this simple grammar (in bison/YACC form)::
 
@@ -88,22 +88,26 @@ class Parser(metaclass=ABCMeta):
         >> l.addtoken('NUMBER',r'[0-9]+')
         >> p = parser(l)
         >>
-        >> p.addrule('prog', "expr", lambda v: print(v[0]))
+        >> p.addproduction('prog', "expr", lambda v: print(v[0]))
         >> 
-        >> p.addrule('expr', "expr '+' term", lambda v: v[0] + v[2])
-        >> p.addrule('expr', "expr '-' term", lambda v: v[0] - v[2])
-        >> p.addrule('expr', "term", lambda v: v[0])
+        >> p.addproduction('expr', "expr '+' term", lambda v: v[0] + v[2])
+        >> p.addproduction('expr', "expr '-' term", lambda v: v[0] - v[2])
+        >> p.addproduction('expr', "term", lambda v: v[0])
         >>
-        >> p.addrule('term', " '(' expr ')' ", lambda v: v[1])
-        >> p.addrule('term', " NUMBER ", lambda v: v[0])
+        >> p.addproduction('term', " '(' expr ')' ", lambda v: v[1])
+        >> p.addproduction('term', " NUMBER ", lambda v: v[0])
         >>
         >> p.parse("5-(9+2)")
         -6
 
     """
 
+    def ap(self,*args,**kwargs):
+        """A shorthand for ``addproduction``."""
+        self.addproduction(*args,**kwargs)
+
     @abstractmethod
-    def addrule(self,symbol,rule,action):
+    def addproduction(self,symbol,rule,action):
         """Add a production (rule) to the grammar of the parser. Instructs the
         parser that `symbol` can be derived using `rule`, producing a result
         via `action`.
@@ -119,7 +123,8 @@ class Parser(metaclass=ABCMeta):
         nonterminal symbols (see below). It may also be a list of such strings
         (with all whitespace stripped). In other words, if the rule is
         ``"foo '*' bar"`` you could equivalently use rule.split() - both work
-        just as well.
+        just as well. To specify an empty production ( X->epsilon ), simply
+        make `rule` be an empty string (NOT ``None``).
 
         `action` is a function (often a lambda expression, but there is no
         such requirement) that takes a list as input and may return some value.
@@ -153,7 +158,7 @@ class Parser(metaclass=ABCMeta):
         1 and 2 describe "terminal symbols", in that they have no derivations
         and exist directly in the input stream. 3, the nontermimal symbols,
         are exactly the set of strings called "symbol" that get passed to this
-        function (`addrule`).
+        function.
 
         Note that string literals are only supported when using
         ``lexer.Lexer``'s `report_literals` option (which is on by default).
@@ -172,14 +177,10 @@ class Parser(metaclass=ABCMeta):
     def parse(self,input):
         """Parse the given `input` (a string) using the given rules and lexer.
 
-        Note that some parser generators produce parsers that will return
-        an Abstract Syntax Tree (AST) as a result, allowing the caller to
-        walk the tree and produce the desired final product. However, this
-        parser does not do that.
-
-        Instead, this function will return nothing, but will produce the
-        desired final product by means of the `action` functions given in
-        ``Parser.addrule``. 
+        Note that this parser does not return any value, unlike other parsers
+        which might return a syntax tree. Instead, this function will produce
+        the desired final product by means of the `action` functions given in
+        ``Parser.addproduction``. 
         """
         pass
 
