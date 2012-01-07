@@ -30,6 +30,11 @@ class LLParser(Parser):
         self.finalized = False
         self.productions = {}
         self.start = None
+        self.terminals = { self._make_symbol(t.name,True)
+                           for t in lexer.tokens
+                           if not lexer.tokens[t][1]    # TODO Token class
+                         } + {_EOF}
+        
 
     def addproduction(self,symbol,rule,action, start_production=False):
         # TODO - check for left-recursive and left-factored
@@ -73,10 +78,13 @@ class LLParser(Parser):
 
         self.productions[symbol].append(rule_symbols)
 
-        # Also, add any new implicit symbols to the production table
+        # Add any new implicit symbols to the production table
         for implicit in rule_symbols:
             if not implicit.terminal and not implicit.name in self.productions:
                 self.productions[implicit.name] = []
+
+        # Add any new string literal tokens to the terminals set
+        self.terminals |= { s for s in rule_symbols if s.literal }
 
 
     def finalize(self):
@@ -97,6 +105,10 @@ class LLParser(Parser):
         # Initialize the (empty) FIRST and FOLLOW sets
         self.FIRST = {}
         self.FOLLOW = {}
+
+        # Initialize the parsing table
+        self.ptable = {x: {y: [] for y in self.terminals}
+                       for x in self.productions}
 
         # Grammar error detection
         for symbol, rules in self.productions.items():
@@ -119,6 +131,14 @@ class LLParser(Parser):
                         raise GrammarError("Grammar is not LL(1) - ambiguous "
                                            "derivation for symbol {}".format(
                                            symbol))
+
+        # construct the parsing table
+        for symbol, rules in self.productions.items():
+            term_row = self.ptable[symbol]
+            for terminal in self.first(symbol):
+                productions = term_row[terminal]
+                productions.append((symbol,rules))
+                
 
 
     def first(self,symbols):
