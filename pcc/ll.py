@@ -21,6 +21,7 @@
 
 from pcc.parser import Parser, SYMBOL_REGEX, GrammarError, ParserSyntaxError
 
+import itertools
 
 class LLParser(Parser):
     
@@ -97,11 +98,28 @@ class LLParser(Parser):
         self.FIRST = {}
         self.FOLLOW = {}
 
-        # Detect the case that there are nonterminals without productions
+        # Grammar error detection
         for symbol, rules in self.productions.items():
+            # Detect the case that there are nonterminals without productions
             if len(rules) == 0:
                 raise GrammarError('Symbol {} has no productions'.format(
                                    symbol))
+            # LL(1) grammar rule dection
+            if len(rules) > 1:
+                for r1, r2 in itertools.combinations(rules,2):
+                    if (
+                         not self.first(r1).isdisjoint(self.first(r2)) or
+
+                         (_EPSILON in self.first(r1) and not 
+                            self.first(r2).isdisjoint(self.follow(symbol))) or
+
+                         (_EPSILON in self.first(r2) and not
+                            self.first(r1).isdisjoint(self.follow(symbol)))
+                       ):
+                        raise GrammarError("Grammar is not LL(1) - ambiguous "
+                                           "derivation for symbol {}".format(
+                                           symbol))
+
 
     def first(self,symbols):
         """Return the set of terminal symbols which belong to this string's
@@ -283,6 +301,7 @@ class _RuleSymbol:
         return hash((self.is_terminal,self.name,self.literal))
 
 # shortcut symbols
+# The names shouldn't ever cause conflicts, because they are not valid names
 def _EPSILON = _RuleSymbol("",True)
-def _EOF = _RuleSymbol(None,True)
+def _EOF = _RuleSymbol("_",True)
     
