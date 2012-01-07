@@ -19,6 +19,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import re
+import pcc.symbols as symbols
 
 _token_ident = re.compile(r'[a-zA-Z][_a-zA-Z0-0]*')
 
@@ -38,153 +39,145 @@ class Lexer:
     can still have tokens with whitespace due to the greedy nature of
     pattern matching.
 
-    If `report_literals` is True, then in the case that no token matches the
-    current input sequence, rather than raising an error, a token with the
-    name ``'LITERAL'`` will be created with the next character of input (and
-    only one character).
+    If `report_literals` is left True, a token that matches one (and only one)
+    non-whitespace character will be added. This accomplishes two things: it
+    helps (particularly alongside ignore_whitespace) to avoid ``lex()`` ever
+    raising an error because no rule matches the input stream, and it also
+    allows your parser to interpret literal strings in a grammar. This token
+    will be called LITERAL, and `silent` will be (of course) off.
 
     >>> p = Lexer()
-    >>> p.addtoken('NAME',r'[_a-zA-Z][_a-zA-Z0-9]+')
-    >>> p.addtoken('NUMBER',r'[0-9]+')
-    >>> p.addtoken('REAL_NUMBER',r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
-    >>> p.addtoken('TWO_WORDS',r'[a-zA-Z]+ [a-zA-Z]+')
+    >>> p.addtoken(name='NAME',rule=r'[_a-zA-Z][_a-zA-Z0-9]+')
+    >>> p.addtoken(name='REAL_NUMBER',
+    ...            rule=r'(-)?([1-9][0-9]*(\.[0-9]+)?|0\.[0-9]+)')
+    >>> p.addtoken(name='TWO_WORDS',rule=r'[a-zA-Z]+ [a-zA-Z]+')
+    >>> p.addtoken(name='MULTI_LINE',rule=r'foo\nbar')
     >>> input = '''42 is a number
-    ... 3.14159
+    ... 3.14159 foo
+    ... bar sameline
     ... _Long_Identifier_ banana
     ... ocelot!!
     ... '''
-    >>> for token in p.lex(input):
-    ...     print("{} > {} | {},{}".format(token.name, token.match,
-    ...                                    token.line, token.position))
-    NUMBER > 42 | 1,0
-    TWO_WORDS > is a | 1,3
-    NAME > number | 1,8
-    REAL_NUMBER > 3.14159 | 2,0
-    NAME > _Long_Identifier_ | 3,0
-    NAME > banana | 3,18
-    NAME > ocelot | 4,0
-    LITERAL > ! | 4,6
-    LITERAL > ! | 4,7
+    >>> for lexeme in p.lex(input):
+    ...     print("{} > {} | {},{}".format(lexeme.token.name, lexeme.match,
+    ...                                    lexeme.line, lexeme.position))
+    REAL_NUMBER > 42 | 1,1
+    TWO_WORDS > is a | 1,4
+    NAME > number | 1,9
+    REAL_NUMBER > 3.14159 | 2,1
+    MULTI_LINE > foo
+    bar | 2,9
+    NAME > sameline | 3,5
+    NAME > _Long_Identifier_ | 4,1
+    NAME > banana | 4,19
+    NAME > ocelot | 5,1
+    LITERAL > ! | 5,7
+    LITERAL > ! | 5,8
 
     """
     def __init__(self, ignore_whitespace=True, ignore_newlines=True,
                  report_literals=True):
-        self.tokens = {"LITERAL": None}
+        self.tokens = set()
+
+        if report_literals:
+            self.addtoken(name='LITERAL',rule=r'\S')
+
         if ignore_whitespace:
-            self.addtoken('WHITESPACE',r'\s+', silent=True)
+            self.addtoken(name='WHITESPACE',rule=r'\s+', silent=True)
         elif ignore_newlines:
-            self.addtoken('NEWLINE',r'[\n]+', silent=True)
+            self.addtoken(name='NEWLINE',rule=r'[\n]+', silent=True)
 
-        self.literals = report_literals
-
-    def addtoken(self,name,rule, silent=False):
-        """Add a token-generating rule.
-
-        `name` is a unique (to this Lexer) identifier which must match the
-        regular expression ``"[a-zA-Z][_a-zA-Z0-9]*"`` - it may also not be
-        named ``'LITERAL'``, as this is reserved. Classically (and to help
-        avoid conflicts with parser symbols), all tokens should be named in all
-        capitals with underscores between words.
-
-        `rule` is a regular expression in a string (preferably a 'raw' string,
-        but that's up to the user) that will be passed to ``re.match`` to find a
-        token. Avoid using complex regular expressions to avoid breaking the
-        system - try to just use literals, literal groups, and quantifiers, and
-        definitely do not use position metacharacters like "^" and "$" or back-
-        -references.
+    def addtoken(self,token=None, name=None, rule=None, silent=False):
+        """Add the specified ``pcc.symbols.Token`` object to the lexer.
         
-        `silent`, if set to True, will supress the generation of this token as
-        a result from the ``lex`` method. In this case, the token will still be
-        lexed (and input consumed), but the ``lex`` method won't generate the
-        token as output.
+        Either `token` or both `name` and `rule` need to be specified.
+
+        `token`, if used, must be a ``pcc.symbols.Token`` object which will
+        be used in the manner described in that classes documentation. The
+        `silent` flag from this function will be ignored, and instead the same
+        field from the ``Token`` object will be honored.
+
+        If `token` is not specified, then `name` and `rule` must be this
+        new token's name and lexing regular expression respectively. As per
+        ``pcc.symbols.Token``'s documentation, the `silent` flag denotes that
+        this token will not be yielded by this ``Lexer``'s ``lex`` generator,
+        although the token may still consume input. This is useful for 
+        ignoring whitespace and comments, if that is desired.
+
+        The name of the token must be unique to this ``Lexer``.
         """
+        if token is None and (name is None or rule is None):
+            raise ValueError('For addtoken(), must specify token or name and '
+                             'rule')
 
-        if not _token_ident.match(name):
-            raise ValueError('Token name {} is invalid.'.format(name))
+        if token is None:
+            token = symbols.Token(name,rule,silent)
 
-        if name in self.tokens:
-            raise ValueError('Token name {} already exists.'.format(name))
+        if type(token) != symbols.Token:
+            raise ValueError('token must be a pcc.symbols.Token instance')
 
-        self.tokens[name] = (re.compile(rule),silent)
+        if token == symbols.EOF or token == symbols.EPSILON:
+            raise ValueError('Do not use EOF or EPSILON during lexing, these '
+                             'tokens are for grammar productions only.')
+
+        if token in self.tokens:
+            raise ValueError('Token {} already exists.'.format(token))
+
+        self.tokens |= {token}
+        
 
         
 
     def lex(self,input):
-        """Generator that produces Token objects from the input string."""
-        # IMPORTANT NOTE: There is currently a bug in which if two tokens
-        # both tie for the best match, one will be chosen essentially at
-        # random (by the sorting algorithm). In theory, this should produce
-        # an error instead. However, checking this is costly - and the
-        # semi-random non-crashing behavior of the bug is probably preferable.
-
+        """Generator that produces ``Lexeme`` objects from the input string."""
         if len(self.tokens) < 1:
             raise ValueError('The lexer must have at least 1 rule to work.')
 
         line = 1
-        line_pos = 0
+        line_pos = 1
         position = 0
         end = len(input)
 
-        # TODO - this algorithm is very brute force, and essentially works
-        # by running the regexp from every token for every step of the input.
-        # There MUST be a much better way, probably by doing some sort of
-        # regexp combining or - if I really want to recreate Lex/Yacc - a
-        # finite-state automaton. For now we will use this brute force method,
-        # for although it is not ideal, it seems fast enough for the intended
-        # use case.
-
         while position < end:
                       # This is a tuple (name,match_object,silent_flag)
-            matches = [ (name, matcher[0].match(input,position),matcher[1])
-                       for name, matcher in self.tokens.items()
-                       if matcher is not None  # don't process "LITERAL"
-                      ]
+            matches = [(token, token.match(input,position))
+                       for token in self.tokens ]
             # Prune out all non-matches and 0-length matches
-            matches = [ x for x in matches if x[1] and len(x[1].group(0)) > 0]
+            matches = [(token,match) for token,match in matches
+                       if match and len(match) > 0 ]
             if len(matches) == 0:
-                if self.literals:
-                    # Inject a fake 'LITERAL' token
-                    match_name = 'LITERAL'
-                    silent = False
-                    match_text = input[position]
-                else:
-                    raise ValueError('No token was found at line {} position '
-                                     '{}.'.format(line,line_pos))
-            else:
-                # Sort the matches by match length, descending.
-                matches.sort(
-                             reverse= True,
-                             key= lambda x: len(x[1].group(0))
-                            )
-    
-                match_name, match_object, silent = matches[0]
-                match_text = match_object.group(0)
+                raise ValueError('No token was found at line {} position '
+                                 '{}.'.format(line,line_pos))
+            # Sort the matches by match length, descending.
+            matches.sort(reverse= True, key=lambda x: len(x[1]))
 
-            if not silent:
-                yield Token(match_name,match_text,line,line_pos)
+            # Pull out the top match
+            #     TODO: are we sure we want to do this, or rather Error?
+            top_token, top_match = matches[0]
+
+            if not top_token.silent:
+                yield Lexeme(top_token,top_match,line,line_pos)
 
             # Advance line and line_pos as needed.
-            line_count = match_text.count("\n")
+            line_count = top_match.count("\n")
             line += line_count
             if line_count > 0:
-                line_pos = len(match_text.split("\n")[-1])
+                line_pos = len(top_match.split("\n")[-1]) +1
             else:
-                line_pos += len(match_text)
+                line_pos += len(top_match)
 
-            position += len(match_text)
+            position += len(top_match)
             
             
     
-class Token:
-    """A container for a token name, a bit of input that matched that token's
-    lexing rule, and the position in the input stream at which it occured.
+class Lexeme:
+    """Input (string) that has been matched to some ``Token``.
 
-    Every Token object has the fields ``name``, ``match``, ``line``, and
+    Every ``Lexeme`` object has the fields ``name``, ``match``, ``line``, and
     ``position``.
     """
-    
-    def __init__(self, name, match, line, position):
-        self.name = name
+    def __init__(self, token, match, line, position):
+        self.token = token
         self.match = match
         self.line = line
         self.position = position

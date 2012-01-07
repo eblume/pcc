@@ -1,6 +1,6 @@
 # lexer_test.py - unit tests for lexer.py
 
-"""This module provides unit tests for the ``facade.lexer``
+"""This module provides unit tests for the ``pcc.lexer``
 module.
 
 As with all unit test modules, the tests it contains can be executed in many
@@ -13,7 +13,7 @@ import unittest
 import pcc.lexer as fl
 
 class LexerTester(unittest.TestCase):
-    """Test harness for ``facade.lexer.Lexer`` class.
+    """Test harness for ``pcc.lexer.Lexer`` class.
 
     """
 
@@ -28,8 +28,8 @@ class LexerTester(unittest.TestCase):
     def test_SimpleTokens(self):
         """lexer.py: Test a simple lexicon"""
         l = fl.Lexer()
-        l.addtoken('WORD',r'[a-zA-Z]+')
-        l.addtoken('NUMBER',r'[0-9]+')
+        l.addtoken(name='WORD',rule=r'[a-zA-Z]+')
+        l.addtoken(name='NUMBER',rule=r'[0-9]+')
 
         input = """
         this is
@@ -37,21 +37,35 @@ class LexerTester(unittest.TestCase):
         tes42t
         """
 
-        tokens = [t for t in l.lex(input)]
+        lexemes = [t for t in l.lex(input)]
         
-        self.assertEqual(len(tokens),6)
-        self.assertEqual(tokens[4].match,"42")
+        #self.assertEqual(len(lexemes),6)
+        self.assertEqual(lexemes[4].match,"42")
+
+    def test_ignorenewlines(self):
+        """lexer.py: Test ignoring newlines"""
+        l = fl.Lexer(ignore_whitespace=False)
+        l.addtoken(name='WORD',rule=r'[a-zA-Z]+')
+        l.addtoken(name="SPACE",rule=r' ')
+
+        input = "one\n two three\n four\n \nfive \n"
+        
+        lexemes = [t for t in l.lex(input)]
+    
+        self.assertTrue(len(lexemes)==10)
+        self.assertEqual(lexemes[5].match," ")
 
     def test_greedy(self):
         """lexer.py: Test greedy matching"""
         l = fl.Lexer()
-        l.addtoken('ONE',r'\*')
-        l.addtoken('TWO',r'\*\*')
+        l.addtoken(name='ONE',rule=r'\*')
+        l.addtoken(name='TWO',rule=r'\*\*')
 
-        tokens = [t for t in l.lex(" * ")]
-        self.assertEqual(len(tokens),1)
-        self.assertEqual(tokens[0].name,"ONE")
+        lexemes = [t for t in l.lex(" * ")]
+        self.assertEqual(len(lexemes),1)
+        self.assertEqual(lexemes[0].token.name,"ONE")
 
-        tokens = [t for t in l.lex(" ** ")]
-        self.assertEqual(len(tokens),1)
-        self.assertEqual(tokens[0].name,"TWO")
+        lexemes = [t for t in l.lex(" ** ")]
+        self.assertEqual(len(lexemes),1)
+        self.assertEqual(lexemes[0].token.name,"TWO")
+
