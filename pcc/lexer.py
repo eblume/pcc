@@ -77,7 +77,7 @@ class Lexer:
     """
     def __init__(self, ignore_whitespace=True, ignore_newlines=True,
                  report_literals=True):
-        self.tokens = set()
+        self.tokens = {}
 
         if report_literals:
             self.addtoken(name='LITERAL',rule=r'\S')
@@ -113,17 +113,10 @@ class Lexer:
         if token is None:
             token = symbols.Token(name,rule,silent)
 
-        if type(token) != symbols.Token:
-            raise ValueError('token must be a pcc.symbols.Token instance')
-
-        if token == symbols.EOF or token == symbols.EPSILON:
-            raise ValueError('Do not use EOF or EPSILON during lexing, these '
-                             'tokens are for grammar productions only.')
-
-        if token in self.tokens:
+        if token.name in self.tokens:
             raise ValueError('Token {} already exists.'.format(token))
 
-        self.tokens |= {token}
+        self.tokens[token.name] = token
         
 
         

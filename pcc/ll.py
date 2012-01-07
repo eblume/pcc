@@ -19,7 +19,8 @@
 # along with pcc, in a file called COPYING.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-from pcc.parser import Parser, SYMBOL_REGEX, GrammarError, ParserSyntaxError
+from pcc.parser import Parser, GrammarError, ParserSyntaxError
+from pcc.symbols import Symbol, Token, EOF, EPSILON, SymbolString
 
 import itertools
 
@@ -30,61 +31,48 @@ class LLParser(Parser):
         self.finalized = False
         self.productions = {}
         self.start = None
-        self.terminals = { self._make_symbol(t.name,True)
-                           for t in lexer.tokens
-                           if not lexer.tokens[t][1]    # TODO Token class
-                         } + {_EOF}
-        
+        self.terminals = {t for t in lexer.tokens.values()} + {EOF}
 
     def addproduction(self,symbol,rule,action, start_production=False):
-        # TODO - check for left-recursive and left-factored
         if self.finalized:
-            raise GrammarError("Can't add a production after finalizing the "
-                               "parser (maybe you called parse() too soon?")
-        
-        # Check to see if symbol is a valid symbol
-        if not SYMBOL_REFEX.match(symbol):
-            raise GrammarError('Invalid symbol name: {}'.format(symbol))
+            raise ValueError("Can't add a production after finalizing the "
+                             "parser (maybe you called parse() too soon?")
 
-        # Check to see that the symbol isn't a token name
-        if symbol in self.lexer.tokens:
+        symbol = Symbol(symbol)
+
+        if symbol.name in self.lexer.tokens:
             raise GrammarError('Symbol conflicts with Token name: {}'.format(
-                               symbol))
+                               symbol.name))
 
         # Initial start_production check
         if self.start is not None and start_production:
             raise GrammarError('A Start production has already been specified.')
 
-        # If rule is a string, split it
-        if type(rule) == str:
-            rule = rule.split()
-
         # Symbolize the rule
-        rule_symbols = tuple([ self._make_symbol(x) for x in rule ])
+        rule_string=SymbolString([self._make_symbol(x) for x in rule.split()])
 
         # Handle epsilon-productions:
         if len(rule_symbols == 0):
-            rule_symbols = (self._make_symbol(''),)
+            rule_symbols = SymbolString((EPSILON,))
 
         # Wrap up start_production stuff
         if start_production:
-            rule_symbols += (_EOF,)
             self.start = (symbol,rule_symbols)
 
         # Add the final production to the production table
-        
         if symbol not in self.productions:
             self.productions[symbol] = []
-
         self.productions[symbol].append(rule_symbols)
 
         # Add any new implicit symbols to the production table
         for implicit in rule_symbols:
-            if not implicit.terminal and not implicit.name in self.productions:
+            if ( not implicit.terminal() and
+                 not implicit.name in self.productions
+               ):
                 self.productions[implicit.name] = []
 
         # Add any new string literal tokens to the terminals set
-        self.terminals |= { s for s in rule_symbols if s.literal }
+        self.terminals |= { s for s in rule_symbols if s.terminal() }
 
 
     def finalize(self):
@@ -102,7 +90,7 @@ class LLParser(Parser):
             raise ValueError('Attempt to finalize an already finalized parser.')
         self.finalized = True
         
-        # Initialize the (empty) FIRST and FOLLOW sets
+        # Initialize the (empty) FIRST and FOLLOW caches
         self.FIRST = {}
         self.FOLLOW = {}
 
@@ -115,41 +103,41 @@ class LLParser(Parser):
             # Detect the case that there are nonterminals without productions
             if len(rules) == 0:
                 raise GrammarError('Symbol {} has no productions'.format(
-                                   symbol))
+                                   symbol.name))
             # LL(1) grammar rule dection
-            if len(rules) > 1:
+            elif len(rules) > 1:
                 for r1, r2 in itertools.combinations(rules,2):
                     if (
                          not self.first(r1).isdisjoint(self.first(r2)) or
 
-                         (_EPSILON in self.first(r1) and not 
+                         (EPSILON in self.first(r1) and not 
                             self.first(r2).isdisjoint(self.follow(symbol))) or
 
-                         (_EPSILON in self.first(r2) and not
+                         (EPSILON in self.first(r2) and not
                             self.first(r1).isdisjoint(self.follow(symbol)))
                        ):
                         raise GrammarError("Grammar is not LL(1) - ambiguous "
                                            "derivation for symbol {}".format(
-                                           symbol))
+                                           symbol.name))
 
         # construct the parsing table
         for symbol, rules in self.productions.items():
-            term_row = self.ptable[symbol]
-            for terminal in self.first(symbol):
-                productions = term_row[terminal]
-                productions.append((symbol,rules))
-                
+            for rule in rules:
+                for term in self.first(rule): # either rule or symbol (GULP)
+                    self.ptable[symbol][term].append((symbol,rule))
+                if EPSILON in self.first(rule):
+                    for term in self.follow(symbol):
+                        self.ptable[symbol][term].append((symbol,rule))
 
 
     def first(self,symbols):
-        """Return the set of terminal symbols which belong to this string's
+        """Return the set of terminal ``Symbol``s which belong to this string's
         FIRST set. See Aho, Ullman et.al.'s 2nd edition "Compilers...",
         section 4.4.2.
         
-        `symbols` must be a hashable iterable (usually a tuple) of _RuleSymbol
-        objects.
+        `symbols` must be a ``pcc.symbols.SymbolString`` object.
 
-        The returned value will be a set of _RuleSymbol objects.
+        The returned value will be a set of terminal``Symbol`` objects.
         """
         # First, finalize (end rule-adding phase)
         if not self.finalized:
@@ -163,7 +151,7 @@ class LLParser(Parser):
 
         if len(symbols) == 1:
             symbol = symbols[0]
-            if symbol.terminal:
+            if symbol.terminal():
                 # Terminal singletons are their own FIRST set
                 result = { symbol }
                 self.FIRST[symbols] = result
@@ -175,8 +163,8 @@ class LLParser(Parser):
                 result = set()
                 for rule in rules:
                     result |= self._first_string(rule)
-                if (_EPSILON,) in rules:
-                    result |= {_EPSILON}
+                if SymbolString((EPSILON,)) in rules:
+                    result |= {EPSILON}
                 self.FIRST[symbols] = result
                 return result
         else:
@@ -186,17 +174,17 @@ class LLParser(Parser):
             return result
 
     def _first_string(self,symbols):
-        "Helper func of ``first()`` on a string"
+        "Helper func of ``first()`` on a SymbolString"
         result = set()
         flag_epsilon = True
         for symbol in symbols:
-            new_set = self.first((symbol,))
-            result |= (new_set - {_EPSILON} )
-            if not _EPSILON in new_set:
+            new_set = self.first(SymbolString(symbol,)))
+            result |= (new_set - {EPSILON} )
+            if not EPSILON in new_set:
                 flag_epsilon = False
                 break
         if flag_epsilon:
-            result |= {_EPSILON}
+            result |= {EPSILON}
         return result
 
     def follow(self,symbol):
@@ -209,16 +197,17 @@ class LLParser(Parser):
         if not self.finalized: 
             self.finalize()
 
-        if symbol.terminal:
+        if symbol.terminal():
             raise ValueError('Attempt to compute FOLLOW of a terminal')
         
         if symbol in self.FOLLOW:
-            return self.FOLLOW[symbols]
+            return self.FOLLOW[symbol]
 
         result = set()
 
         if symbol == self.start[0]:
-            result |= {_EOF,}
+            # This is the start symbol, so it's FOLLOW will always have EOF
+            result |= {EOF}
 
         # Find productions with symbol on the RHS
         for nonterminal, rules in self.productions.items():
@@ -227,13 +216,13 @@ class LLParser(Parser):
                     if not rule[index] == symbol:
                         continue
 
-                    if index = len(rule) - 1:
+                    if index == len(rule) - 1:
                         # symbol occurs at the end of the rule
                         result |= self.follow(nonterminal)
                     else:
                         new_set = self.first(rule[index+1:])
-                        result |= ( new_set - {_EPSILON} )
-                        if _EPSILON in new_set:
+                        result |= ( new_set - {EPSILON} )
+                        if EPSILON in new_set:
                             result |= self.follow(nonterminal)
 
         # Check to make sure the set isn't empty, which is bad.
@@ -242,9 +231,9 @@ class LLParser(Parser):
 
         # Final EPSILON check - shouldn't ever happen, but will spell
         # disaster if it does.
-        if _EPSILON in result:
+        if EPSILON in result:
             raise ValueError('Somehow got EPSILON in the FOLLOW set of {}'
-                             .format(symbol))
+                             .format(symbol.name))
 
         self.FOLLOW[symbol] = result
         return result
@@ -254,74 +243,19 @@ class LLParser(Parser):
         if not self.finalized:
             self.finalize()
 
-    def _make_symbol(self,_name):
+    def _make_symbol(self,name):
         """Helper function to symbolize the elements of a production's rule"""
-        if name =="":
-            return _EPSILON
 
+        # If it looks like a string literal, make a literal-like token
         if len(name)==3 and name[0]=="'" and name[2]=="'":
-            # String Literal!
-            symbol = _RuleSymbol("LITERAL",True)
-            symbol.literal = name[1]
-            return symbol
+            return Token("LITERAL",name[1])
     
+        # If the name is in the lexer's token set, use that token
         if name in self.lexer.tokens:
-            return _RuleSymbol(name,True)
+            return self.lexer.tokens[name]
 
-        # Otherwise, it's a non-terminal - check to make sure its name conforms
-        if not SYMBOL_REGEX.match(name):
-            raise GrammarError('Invalid implicit symbol name: {}'.format(
-                               symbol))
-        return _RuleSymbol(name,False)
+        # Otherwise, we assume it's a Symbol. If it's not, then the Symbol
+        # regexp should catch it and barf, which is what we want.
+        return Symbol(name)
 
-class _RuleSymbol:
-    """Wrapper class to reason about symbols that appear in productions"""
-    def __init__(self,name,is_terminal):
-        self.terminal = is_terminal
-        self.name = name
-        self.literal = None # Special field, just for string literals
-    
-    def __eq__(self,other):
-        """Compare two ``_RuleSymbol`` objects for equivalence.
-
-        >>> a = _RuleSymbol('foo',True)
-        >>> b = _RuleSymbol('foo',True)
-        >>> c = _RuleSymbol('bar',True)
-        >>> d = _RuleSymbol('foo',False)
-        >>> a == a
-        True
-        >>> a == b
-        True
-        >>> a is b
-        False
-        >>> a == c
-        False
-        >>> a == d
-        False
-        """
-        return (
-            self.terminal == other.terminal and
-            self.name == other.name and
-            self.literal == self.literal
-        )
-
-    def __hash__(self):
-        """Hash a ``_RuleSymbol`` object to an integer value.
-        
-        >>> a = _RuleSymbol('foo',True)
-        >>> b = _RuleSymbol('foo',True)
-        >>> c = _RuleSymbol('bar',True)
-        >>> hash(a) == hash(a)
-        True
-        >>> hash(a) == hash(b) # because a == b, this is supposed to be true
-        True
-        >>> hash(a) == hash(c)
-        False
-        """
-        return hash((self.is_terminal,self.name,self.literal))
-
-# shortcut symbols
-# The names shouldn't ever cause conflicts, because they are not valid names
-def _EPSILON = _RuleSymbol("",True)
-def _EOF = _RuleSymbol("_",True)
     

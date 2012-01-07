@@ -94,3 +94,17 @@ class SymbolStringTester(unittest.TestCase):
         self.assertEqual(len(d), 3)
         self.assertTrue(e[0] in d)
 
+        g = d + sy.Symbol('c')
+        d += sy.Symbol('c')
+
+        self.assertEqual(g,d)
+        self.assertEqual(len(d),4)
+        self.assertEqual(d[3],sy.Symbol('c'))
+
+        set_a = {d,e}
+        self.assertTrue(g in set_a)
+        self.assertFalse(f in set_a)
+
+        
+
+

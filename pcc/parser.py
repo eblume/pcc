@@ -30,6 +30,7 @@ import re
 
 def parser(lexer):
     """Create a Parser using the default algorithm."""
+    # Only import from inside this function to avoid circular imports
     from pcc.ll import LLParser
     return LLParser(lexer)
 
@@ -40,8 +41,6 @@ class GrammarError(Exception):
 class ParserSyntaxError(Exception):
     "Exception raised by a ``parser.Parser`` object when a syntax error occurs."
     pass
-
-SYMBOL_REGEX = re.compile(r'[a-zA-Z][_a-zA-Z]*')
 
 class Parser(metaclass=ABCMeta):
     """CFG parser of arbitrary BNF-like grammars.
@@ -78,18 +77,20 @@ class Parser(metaclass=ABCMeta):
             [.... etc, for each number 0-9 ....]
             ;
 
+    >>> from pcc.lexer import Lexer
     >>> l = Lexer()
-    >>> l.addtoken('NUMBER',r'[0-9]+')
+    >>> l.addtoken(name='NUMBER',rule=r'[0-9]+')
     >>> p = parser(l)
     >>>
-    >>> p.addproduction('prog', "expr", lambda v: print(v[0]))
+    >>> p.addproduction('prog', "expr", lambda v: print(v[0]),
+    ...                 start_production=True)
     >>> 
     >>> p.addproduction('expr', "expr '+' term", lambda v: v[0] + v[2])
     >>> p.addproduction('expr', "expr '-' term", lambda v: v[0] - v[2])
     >>> p.addproduction('expr', "term", lambda v: v[0])
     >>>
     >>> p.addproduction('term', " '(' expr ')' ", lambda v: v[1])
-    >>> p.addproduction('term', " NUMBER ", lambda v: v[0])
+    >>> p.addproduction('term', " NUMBER ", lambda v: int(v[0]))
     >>>
     >>> p.parse("5-(9+2)")
     -6
@@ -114,11 +115,8 @@ class Parser(metaclass=ABCMeta):
         rule will not be added.
 
         `rule` is a string that has whitespace seperated terminal and
-        nonterminal symbols (see below). It may also be a list of such strings
-        (with all whitespace stripped). In other words, if the rule is
-        ``"foo '*' bar"`` you could equivalently use rule.split() - both work
-        just as well. To specify an empty production ( X->epsilon ), simply
-        make `rule` be an empty string (NOT ``None``).
+        nonterminal symbols (see below). To specify an empty production
+        ( X->epsilon ), simply make `rule` be an empty string (NOT ``None``).
 
         `action` is a function (often a lambda expression, but there is no
         such requirement) that takes a list as input and may return some value.
@@ -163,7 +161,7 @@ class Parser(metaclass=ABCMeta):
         recall that this will match *any* string literal, not just the specific
         one you could have given if you had used the single-quote shortcut.
 
-        It is currently very combursome to try and match multi-character string
+        It is currently very cumbursome to try and match multi-character string
         literals, so it is generally suggested to wrap such keywords in a
         token specificically for that keyword instead.
 

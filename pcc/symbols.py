@@ -109,7 +109,7 @@ class SymbolString:
     """
 
     def __init__(self,symbols):
-        self._symbols = symbols
+        self._symbols = list(symbols)
 
     def __iter__(self):
         for s in self._symbols:
@@ -138,5 +138,10 @@ class SymbolString:
 
     def __str__(self):
         return " ".join(str(x) for x in self._symbols)
+
+    def __add__(self, elem):
+        new_symbols = list(self._symbols)
+        new_symbols.append(elem)
+        return SymbolString(new_symbols)
 
 
