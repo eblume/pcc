@@ -38,7 +38,7 @@ class GrammarError(Exception):
     "Exception raised by a ``parser.Parser`` object *before* parsing begins."
     pass
 
-class ParserSyntaxError(Exception):
+class ParsingError(Exception):
     "Exception raised by a ``parser.Parser`` object when a syntax error occurs."
     pass
 
@@ -52,7 +52,7 @@ class Parser(metaclass=ABCMeta):
     All are essentially 'context free grammars'. If a parser encounters an
     error before parsing has begun (ie. an error with a production) then
     ``parser.GrammarError`` should be raised. If a parser encounters a syntax
-    error during parsing, then ``parser.ParserSyntaxError`` should be raised.
+    error during parsing, then ``parser.ParsingError`` should be raised.
     Other errors should be reported in the most reasonably expressive manner
     possible.
 
@@ -82,8 +82,7 @@ class Parser(metaclass=ABCMeta):
     >>> l.addtoken(name='NUMBER',rule=r'[0-9]+')
     >>> p = parser(l)
     >>>
-    >>> p.addproduction('prog', "expr", lambda v: print(v[0]),
-    ...                 start_production=True)
+    >>> p.addproduction('prog', "expr", lambda v: v[0], start_production=True)
     >>> 
     >>> p.addproduction('expr', "expr '+' term", lambda v: v[0] + v[2])
     >>> p.addproduction('expr', "expr '-' term", lambda v: v[0] - v[2])

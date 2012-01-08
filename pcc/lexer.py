@@ -166,7 +166,7 @@ class Lexer:
 class Lexeme:
     """Input (string) that has been matched to some ``Token``.
 
-    Every ``Lexeme`` object has the fields ``name``, ``match``, ``line``, and
+    Every ``Lexeme`` object has the fields ``token``, ``match``, ``line``, and
     ``position``.
     """
     def __init__(self, token, match, line, position):
