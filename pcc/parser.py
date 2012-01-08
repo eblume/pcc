@@ -26,7 +26,6 @@ value as the result for that expression.
 # <http://www.gnu.org/licenses/>.
 
 from abc import ABCMeta,abstractmethod
-import re
 
 def parser(lexer):
     """Create a Parser using the default algorithm."""
@@ -77,21 +76,25 @@ class Parser(metaclass=ABCMeta):
             [.... etc, for each number 0-9 ....]
             ;
 
-    >>> from pcc.lexer import Lexer
-    >>> l = Lexer()
-    >>> l.addtoken(name='NUMBER',rule=r'[0-9]+')
-    >>> p = parser(l)
-    >>>
-    >>> p.addproduction('prog', "expr", lambda v: v[0], start_production=True)
-    >>> 
-    >>> p.addproduction('expr', "expr '+' term", lambda v: v[0] + v[2])
-    >>> p.addproduction('expr', "expr '-' term", lambda v: v[0] - v[2])
-    >>> p.addproduction('expr', "term", lambda v: v[0])
-    >>>
-    >>> p.addproduction('term', " '(' expr ')' ", lambda v: v[1])
-    >>> p.addproduction('term', " NUMBER ", lambda v: int(v[0]))
-    >>>
-    >>> p.parse("5-(9+2)")
+    Unfortunately, at this time the example doesn't work due to there not yet
+    being a working LR parser. Therefore the following code example, which
+    still gives you a good idea for the syntax, is greyed-out::
+
+    >> from pcc.lexer import Lexer
+    >> l = Lexer()
+    >> l.addtoken(name='NUMBER',rule=r'[0-9]+')
+    >> p = parser(l)
+    >>
+    >> p.addproduction('prog', "expr", lambda v: v[0], start_production=True)
+    >> 
+    >> p.addproduction('expr', "expr '+' term", lambda v: v[0] + v[2])
+    >> p.addproduction('expr', "expr '-' term", lambda v: v[0] - v[2])
+    >> p.addproduction('expr', "term", lambda v: v[0])
+    >>
+    >> p.addproduction('term', " '(' expr ')' ", lambda v: v[1])
+    >> p.addproduction('term', " NUMBER ", lambda v: int(v[0]))
+    >>
+    >> p.parse("5-( 9+ 2 )")
     -6
 
     """
