@@ -52,7 +52,6 @@ setup(
     long_description = read('README.rst'),
     classifiers = [
         'Development Status :: 3 - Alpha',
-        'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'License :: OSI Approved :: GNU General Public License (GPL)',
