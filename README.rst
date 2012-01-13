@@ -108,7 +108,8 @@ may report that there is a ``tests`` command, this has not been configured - use
 Release History
 ---------------
 
-No release has been made yet. How cool are you?
+0.1 - 13 January 2012
+    Working LL(1) parser with semantic actions.
 
 Contributing
 ------------
