@@ -128,6 +128,8 @@ class LLTester(unittest.TestCase):
         p.ap('F',"NUM", lambda x: int(x[0]))
     
         self.assertEqual(p.parse("2+3*4"),14)
+        self.assertEqual(p.parse("5"),5)
+        self.assertEqual(p.parse("1+1+1+1+1+1+1"),7)
         
         
 
