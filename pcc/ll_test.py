@@ -22,8 +22,7 @@ class LLTester(unittest.TestCase):
 
     def setUp(self):
         """Create the testing environment"""
-        self.lexer = Lexer()
-        self.lexer.addtoken(name='NUM',rule=r'[0-9]+')
+        pass
 
 
     def tearDown(self):
@@ -33,7 +32,9 @@ class LLTester(unittest.TestCase):
     def test_first(self):
         """ll.py: Test FIRST set creation"""
         # Grammar 4.28 in Aho, Ullman et al (except NUM instead of id)
-        p = ll.LLParser(self.lexer)
+        lexer = Lexer()
+        lexer.addtoken(name='NUM',rule=r'[0-9]+')
+        p = ll.LLParser(lexer)
         p.ap('E','T EP', lambda x: x[0] + x[1], start_production=True)
         p.ap('EP',"'+' T EP", lambda x: x[1] + x[2])
         p.ap('EP',"", lambda x: 0)
@@ -70,5 +71,52 @@ class LLTester(unittest.TestCase):
         correct_names = {'LITERAL':'\\*', '_EPSILON': ''}
         self.assertEqual(names,correct_names)
 
+    def test_follow(self):
+        """ll.py: Test FOLLOW set creation"""
+        # Grammar 4.28 in Aho, Ullman et al (except NUM instead of id)
+        lexer = Lexer()
+        lexer.addtoken(name='NUM',rule=r'[0-9]+')
+        p = ll.LLParser(lexer)
+        p.ap('E','T EP', lambda x: x[0] + x[1], start_production=True)
+        p.ap('EP',"'+' T EP", lambda x: x[1] + x[2])
+        p.ap('EP',"", lambda x: 0)
+        p.ap('T',"F TP", lambda x: x[0] * x[1])
+        p.ap('TP',"'*' F TP", lambda x: x[1] * x[2])
+        p.ap('TP',"", lambda x: 1)
+        p.ap('F',"'(' E ')'", lambda x: x[1])
+        p.ap('F',"NUM", lambda x: int(x[0]))
+
+        follow_e = p.follow(Symbol('E'))
+        follow_ep = p.follow(Symbol('EP'))
+        
+        for t in follow_e:
+            print(">>>",str(t))
+
+        for t in follow_ep:
+            print("<<<",str(t))
+
+        self.assertEqual(len(follow_e),2)
+        self.assertEqual(follow_e,follow_ep)
+
+        names = {t.name: t.rule.pattern for t in follow_e}
+        correct_names = {'LITERAL':'\\)', '_EOF':"$"}
+        self.assertEqual(names,correct_names)
+
+        follow_t = p.follow(Symbol('T'))
+        follow_tp = p.follow(Symbol('TP'))
+        self.assertEqual(len(follow_t),3)
+        self.assertEqual(follow_t,follow_tp)
+
+        names = {t.rule.pattern: t.name for t in follow_t}
+        correct_names = {'\\)':'LITERAL', '\\+':'LITERAL', "$":'_EOF'}
+        self.assertEqual(names,correct_names)
+
+        follow_f = p.follow(Symbol('F'))
+        self.assertEqual(len(follow_f),4)
+        
+        names = {t.rule.pattern: t.name for t in follow_f}
+        correct_names = {'\\*':'LITERAL', '\\)':'LITERAL', '\\+':'LITERAL',
+                         "$":'_EOF'}
+        self.assertEqual(names,correct_names)
         
 
