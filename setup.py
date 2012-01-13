@@ -46,9 +46,22 @@ setup(
     author_email = 'blume.erich@gmail.com',
     description = ('CFG parsing for Python 3'),
     license = 'GPLv3',
-    keywords = 'syntax grammar CFG parser preprocessor language compiler',
+    keywords = 'syntax grammar BNF CFG parser preprocessor language compiler',
     url = 'https://github.com/eblume/pcc',
     download_url='https://github.com/eblume/pcc/tarball/master',
     long_description = read('README.rst'),
+    classifiers = [
+        'Development Status :: 3 - Alpha',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Education',
+        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'Natural Language :: English',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Topic :: Software Development :: Compilers',
+        'Topic :: Software Development :: Pre-processors',
+        'Topic :: Text Processing :: Linguistic',
+        ],
 )
 
