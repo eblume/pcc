@@ -95,13 +95,6 @@ class Token(Symbol):
                  self.silent == other.silent
                )
 
-EPSILON = Token("fake",r"")
-EPSILON.name = "_EPSILON"
-EPSILON.__doc__ = "Special ``Token`` to represent an empty string for grammars"
-EOF = Token("fake",r"$")
-EOF.name = "_EOF"
-EOF.__doc__ = "Special ``Token`` to represent the end of the input."
-
 class SymbolString:
     """An ordered collection of ``Symbol`` objects.
 
@@ -109,7 +102,7 @@ class SymbolString:
     """
 
     def __init__(self,symbols):
-        self._symbols = list(symbols)
+        self._symbols = tuple(symbols)
 
     def __iter__(self):
         for s in self._symbols:
@@ -130,8 +123,8 @@ class SymbolString:
             return next(itertools.islice(self._symbols,index,index+1))
         except TypeError:
             # Assume index is a slice object
-            return list(itertools.islice(self._symbols,index.start,index.stop,
-                                         index.step))
+            return SymbolString(list(itertools.islice(
+                            self._symbols,index.start,index.stop,index.step)))
 
     def __contains__(self,item):
         return item in self._symbols
@@ -144,4 +137,24 @@ class SymbolString:
         new_symbols.append(elem)
         return SymbolString(new_symbols)
 
+
+class Lexeme:
+    """Input (string) that has been matched to some ``Token``.
+
+    Every ``Lexeme`` object has the fields ``token``, ``match``, ``line``, and
+    ``position``.
+    """
+    def __init__(self, token, match, line, position):
+        self.token = token
+        self.match = match
+        self.line = line
+        self.position = position
+
+
+EPSILON = Token("fake",r"")
+EPSILON.name = "_EPSILON"
+EPSILON.__doc__ = "Special ``Token`` to represent an empty string for grammars"
+EOF = Token("fake",r"$")
+EOF.name = "_EOF"
+EOF.__doc__ = "Special ``Token`` to represent the end of the input."
 

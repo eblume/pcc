@@ -105,6 +105,23 @@ class SymbolStringTester(unittest.TestCase):
         self.assertTrue(g in set_a)
         self.assertFalse(f in set_a)
 
+    def test_substring(self):
+        """symbols.py: Test SymbolString substrining."""
+        a = sy.Token('WORD',r'[a-zA-Z]+')
+        b = sy.Token('NATURAL_NUMBER',r'[0-9]+')
+        c = sy.Symbol('foo')
+
+        d = sy.SymbolString( (a,b,c) )
+        e = sy.SymbolString( (b,c) )
+
+        self.assertTrue(isinstance(d,sy.SymbolString))
+        self.assertTrue(isinstance(d[1:],sy.SymbolString))
+        self.assertTrue(isinstance(d[0],sy.Symbol))
+        self.assertTrue(isinstance(d[0],sy.Token))
+
+        self.assertEqual(d[1:],e)
+        self.assertEqual(d[2],c)
+
         
 
 
