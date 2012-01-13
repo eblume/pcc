@@ -88,13 +88,6 @@ class LLTester(unittest.TestCase):
 
         follow_e = p.follow(Symbol('E'))
         follow_ep = p.follow(Symbol('EP'))
-        
-        for t in follow_e:
-            print(">>>",str(t))
-
-        for t in follow_ep:
-            print("<<<",str(t))
-
         self.assertEqual(len(follow_e),2)
         self.assertEqual(follow_e,follow_ep)
 
