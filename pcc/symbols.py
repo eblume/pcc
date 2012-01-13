@@ -95,6 +95,10 @@ class Token(Symbol):
                  self.silent == other.silent
                )
 
+    def __repr__(self):
+        return "<pcc.symbols.Token({},r'{}')>".format(
+                self.name,self.rule.pattern)
+
 class SymbolString:
     """An ordered collection of ``Symbol`` objects.
 

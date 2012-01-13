@@ -116,45 +116,35 @@ class LLParser(Parser):
         # (provably always) converges.
         self.FOLLOW[self.start[0]] |= {EOF}
         added_something_flag = True
-        counter = 0
         while added_something_flag:
             added_something_flag = False
-            # TODO - counter stuff is for DEBUG ONLY, and SHOULD BE REMOVED
-            counter += 1
-            if counter > 500:
-                raise ValueError('FOLLOW loop *might* be looping infinitely')
             for symbol, rules in self.productions.items():
                 for rule,action in rules:
+                    # Special edge case - for the start production,
+                    # trim off EOF here. The algorithm assumes EOF
+                    # isn't part of a "sentential form".
+                    if rule[len(rule)-1] == EOF:
+                        rule = rule[:len(rule)-1]
+
                     for index in range(len(rule)):
                         rule_symbol = rule[index]
-                        
                         if rule_symbol.terminal():
                             continue
-
+                        follow_set = self.FOLLOW[rule_symbol]
                         if index < len(rule)-1:
-                            # "if there is more in this string"
+                            # "if there is more in this string
                             first_set = self.first(rule[index+1:])
-                            first_no_e = first_set - {EPSILON}
-                            follow_set = self.FOLLOW[rule_symbol]
-                            if first_no_e - follow_set:
-                                # there are new symbols
-                                added_something_flag = True
-                                follow_set |= first_no_e
+                            added_something_flag |= _update_follow(
+                                follow_set,first_set)
                             if EPSILON in first_set:
                                 symbol_follow = self.FOLLOW[symbol]
-                                if symbol_follow - follow_set:
-                                    # more new symbols
-                                    added_something_flag = True
-                                    follow_set |= symbol_follow
+                                added_something_flag |= _update_follow(
+                                    follow_set,symbol_follow)
                         elif index == len(rule)-1:
                             # The last symbol in the rule
-                            follow_set = self.FOLLOW[rule_symbol]
                             symbol_follow = self.FOLLOW[symbol]
-                            if symbol_follow - follow_set:
-                                # more new symbols
-                                added_somethind_flag = True
-                                follow_set |= symbol_follow
-                        
+                            added_something_flag |= _update_follow(
+                                follow_set, symbol_follow)
 
         # Grammar error detection
         for symbol, rules in self.productions.items():
@@ -350,6 +340,7 @@ class _LexemeIterator:
         self.scan()
 
     def scan(self):
+        "Load the next lexeme"
         try:
             self.next_symbol = next(self.n)
         except StopIteration:
@@ -368,5 +359,14 @@ class _LexemeIterator:
         result = self.next_symbol
         self.scan()
         return result
+
+def _update_follow(a,b):
+    "Add new elements EXCEPT EPSILON from b to a. Return True if not no-op."
+    b = b - {EPSILON}
+    if b - a:
+        a |= b
+        return True
+    return False
+                        
 
 
