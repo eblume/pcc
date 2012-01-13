@@ -20,9 +20,10 @@
 # <http://www.gnu.org/licenses/>.
 
 from pcc.parser import Parser, GrammarError, ParsingError
-from pcc.symbols import Symbol, Token, EOF, EPSILON, SymbolString
+from pcc.symbols import Symbol, Token, EOF, EPSILON, SymbolString, Lexeme
 
 import itertools
+import re
 
 class LLParser(Parser):
     
@@ -31,7 +32,7 @@ class LLParser(Parser):
         self.finalized = False
         self.productions = {}
         self.start = None
-        self.terminals = {t for t in lexer.tokens.values()} + {EOF}
+        self.terminals = {t for t in lexer.tokens.values()} | {EOF}
 
     def addproduction(self,symbol,rule,action, start_production=False):
         if self.finalized:
@@ -49,11 +50,11 @@ class LLParser(Parser):
             raise GrammarError('A Start production has already been specified.')
 
         # Symbolize the rule
-        rule_string=SymbolString([_make_symbol(self.lexerx)
+        rule_symbols=SymbolString([_make_symbol(self.lexer,x)
                                   for x in rule.split()])
 
         # Handle epsilon-productions:
-        if len(rule_symbols == 0):
+        if len(rule_symbols) == 0:
             rule_symbols = SymbolString((EPSILON,))
 
         # Wrap up start_production stuff
@@ -69,9 +70,9 @@ class LLParser(Parser):
         # Add any new implicit symbols to the production table
         for implicit in rule_symbols:
             if ( not implicit.terminal() and
-                 not implicit.name in self.productions
+                 not implicit in self.productions
                ):
-                self.productions[implicit.name] = []
+                self.productions[implicit] = []
 
         # Add any new string literal tokens to the terminals set
         self.terminals |= { s for s in rule_symbols if s.terminal() }
@@ -91,14 +92,69 @@ class LLParser(Parser):
         if self.finalized:
             raise ValueError('Attempt to finalize an already finalized parser.')
         self.finalized = True
+
+        if self.first is None:
+            raise GrammarError('At least one production must be marked as the '
+                               'start production.')
+
         
         # Initialize the (empty) FIRST and FOLLOW caches
         self.FIRST = {}
-        self.FOLLOW = {}
+        self.FOLLOW = {symbol: set() for symbol in self.productions}
 
         # Initialize the parsing table
-        self.ptable = {x: {y: [] for y in self.terminals}
-                       for x in self.productions}
+        self.ptable = {symbol: {terminal: [] for terminal in self.terminals}
+                       for symbol in self.productions}
+
+        # Calculate the FOLLOW sets using the dynamic definition of FIRST sets
+        # (Note that this MUST happen before we call self.follow, so it MUST
+        #  happen before the grammar error detection routine)
+        #
+        # This uses Aho et.al.'s definition, in which empty sets are created,
+        # the start symbol's FOLLOW is seeded with EOF, and then one loops over
+        # the entire grammar indefinitely making corrections until the answer
+        # (provably always) converges.
+        self.FOLLOW[self.start[0]] |= {EOF}
+        added_something_flag = True
+        counter = 0
+        while added_something_flag:
+            added_something_flag = False
+            # TODO - counter stuff is for DEBUG ONLY, and SHOULD BE REMOVED
+            counter += 1
+            if counter > 500:
+                raise ValueError('FOLLOW loop *might* be looping infinitely')
+            for symbol, rules in self.productions.items():
+                for rule,action in rules:
+                    for index in range(len(rule)):
+                        rule_symbol = rule[index]
+                        
+                        if rule_symbol.terminal():
+                            continue
+
+                        if index < len(rule)-1:
+                            # "if there is more in this string"
+                            first_set = self.first(rule[index+1:])
+                            first_no_e = first_set - {EPSILON}
+                            follow_set = self.FOLLOW[rule_symbol]
+                            if first_no_e - follow_set:
+                                # there are new symbols
+                                added_something_flag = True
+                                follow_set |= first_no_e
+                            if EPSILON in first_set:
+                                symbol_follow = self.FOLLOW[symbol]
+                                if symbol_follow - follow_set:
+                                    # more new symbols
+                                    added_something_flag = True
+                                    follow_set |= symbol_follow
+                        elif index == len(rule)-1:
+                            # The last symbol in the rule
+                            follow_set = self.FOLLOW[rule_symbol]
+                            symbol_follow = self.FOLLOW[symbol]
+                            if symbol_follow - follow_set:
+                                # more new symbols
+                                added_somethind_flag = True
+                                follow_set |= symbol_follow
+                        
 
         # Grammar error detection
         for symbol, rules in self.productions.items():
@@ -108,7 +164,7 @@ class LLParser(Parser):
                                    symbol.name))
             # LL(1) grammar rule dection
             elif len(rules) > 1:
-                for r1, r2 in itertools.combinations(rules,2):
+                for (r1,_),(r2,_) in itertools.combinations(rules,2):
                     if (
                          not self.first(r1).isdisjoint(self.first(r2)) or
 
@@ -163,7 +219,7 @@ class LLParser(Parser):
                 # produce
                 rules = self.productions[symbol]
                 result = set()
-                for rule in rules:
+                for rule,action in rules:
                     result |= self._first_string(rule)
                 if SymbolString((EPSILON,)) in rules:
                     result |= {EPSILON}
@@ -180,7 +236,7 @@ class LLParser(Parser):
         result = set()
         flag_epsilon = True
         for symbol in symbols:
-            new_set = self.first(SymbolString(symbol,)))
+            new_set = self.first(SymbolString((symbol,)))
             result |= (new_set - {EPSILON} )
             if not EPSILON in new_set:
                 flag_epsilon = False
@@ -192,9 +248,9 @@ class LLParser(Parser):
     def follow(self,symbol):
         """Compute the FOLLOW set of a nonterminal symbol.
 
-        `symbol` must be an instance of _RuleSymbol, and must be nonterminal.
-
-        The result will be a set of terminal _RuleSymbol objects.
+        Due to the constraint programming approach used to calculate the
+        FOLLOW sets in this implementation, this function merely returns the
+        pre-computed set - the actual set computation occurs in finalize()
         """
         if not self.finalized: 
             self.finalize()
@@ -202,43 +258,7 @@ class LLParser(Parser):
         if symbol.terminal():
             raise ValueError('Attempt to compute FOLLOW of a terminal')
         
-        if symbol in self.FOLLOW:
-            return self.FOLLOW[symbol]
-
-        result = set()
-
-        if symbol == self.start[0]:
-            # This is the start symbol, so it's FOLLOW will always have EOF
-            result |= {EOF}
-
-        # Find productions with symbol on the RHS
-        for nonterminal, rules in self.productions.items():
-            for rule in rules:
-                for index in range(len(rule)):
-                    if not rule[index] == symbol:
-                        continue
-
-                    if index == len(rule) - 1:
-                        # symbol occurs at the end of the rule
-                        result |= self.follow(nonterminal)
-                    else:
-                        new_set = self.first(rule[index+1:])
-                        result |= ( new_set - {EPSILON} )
-                        if EPSILON in new_set:
-                            result |= self.follow(nonterminal)
-
-        # Check to make sure the set isn't empty, which is bad.
-        if len(result) == 0:
-            raise ValueError('FOLLOW set of {} is empty.'.format(symbol))
-
-        # Final EPSILON check - shouldn't ever happen, but will spell
-        # disaster if it does.
-        if EPSILON in result:
-            raise ValueError('Somehow got EPSILON in the FOLLOW set of {}'
-                             .format(symbol.name))
-
-        self.FOLLOW[symbol] = result
-        return result
+        return self.FOLLOW[symbol]
 
     def parse(self,input):
         """Use the recursive descent method to parse the input."""
@@ -246,7 +266,7 @@ class LLParser(Parser):
             self.finalize()
         lexer = _LexemeIterator(self.lexer,input)
         start_symbol, start_rule, start_action = self.start
-        value = _rd_parse_rule(start_rule,start_action,self.ptable,lexer)
+        value = _rd_parse_rule(start_rule,start_action,lexer,self.ptable)
         return value
         
 def _make_symbol(lexer,name):
@@ -254,7 +274,12 @@ def _make_symbol(lexer,name):
 
     # If it looks like a string literal, make a literal-like token
     if len(name)==3 and name[0]=="'" and name[2]=="'":
-        return Token("LITERAL",name[1])
+        # A quick reminder here that this token is NOT the same as
+        # the token called "LITERAL" that is generated automatically by the
+        # lexer when report_literals is True. This is a sort of Token Template,
+        # and if we get a Lexeme with the lexer's LITERAL token, we check to
+        # see if the matched lexeme text matche's this character.
+        return Token("LITERAL",re.escape(name[1]))
 
     # If the name is in the lexer's token set, use that token
     if name in lexer.tokens:
@@ -282,8 +307,8 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
                  (symbol.name == "LITERAL" and not symbol.match(next.match))
                ):
                 raise ParsingError('Expected {} but found {} on line {} at '
-                    'position {}'.format( symbol.name, next.name, next.line,
-                    next.position)
+                    'position {}'.format( symbol.name, next.token.name,
+                    next.line, next.position))
             
             input_values.append(next.match)
             continue
@@ -291,11 +316,11 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
             #non-terminal symbol
             # find the right derivation to follow
             next = lexer.peek()
-            productions = parse_table[symbol][next]
+            productions = parse_table[symbol][next.token]
             
             if len(productions) == 0:
-                raise ParsingError('Unexpected input {} on line {} at position '
-                    '{}'.format(next.match,next.line,next.position)
+                raise ParsingError('Unexpected input "{}" on line {} at '
+                    'position {}'.format(next.match,next.line,next.position))
             elif len(productions) > 1:
                 # TODO - more than one production means this isn't actually
                 # LL(1). In the future, we should automatically left-factor
@@ -306,7 +331,8 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
                 pass
             new_rule,new_action = productions[0]
             # RECURSION
-            input_values.append(_rd_parse_rule(new_rule,new_action,lexer))
+            input_values.append(_rd_parse_rule(new_rule,new_action,lexer,
+                                parse_table))
             continue
     # Parsing complete, now perform the 'action'
     if hasattr(action, '__call__'):
@@ -329,7 +355,7 @@ class _LexemeIterator:
         except StopIteration:
             def _false_iter():
                 while True:
-                    yield EOF
+                    yield Lexeme(EOF,"EOF",-1,-1)
             self.n = _false_iter()
             self.next_symbol = next(self.n)
 
