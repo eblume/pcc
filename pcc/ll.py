@@ -164,7 +164,8 @@ class LLParser(Parser):
         # construct the parsing table
         for symbol, rules in self.productions.items():
             for rule,action in rules:
-                for term in self.first(rule): # either rule or symbol (GULP)
+                for term in self.first(SymbolString((symbol,))):
+                    # either rule or symbol (GULP)
                     self.ptable[symbol][term].append((rule,action))
                 if EPSILON in self.first(rule):
                     for term in self.follow(symbol):

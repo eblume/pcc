@@ -1,0 +1,75 @@
+This branch exists to illustrate the point that the 2nd edition of Aho,
+Ullman et. al.'s "Compilers" text contains an erratum in algorithm
+4.31 "Construction of a predictive parsing table".
+
+The erratum occurs in the first step of the main loop of the algorithm::
+
+    1. For each terminal a in FIRST(A), add A → α to M[A, a].
+
+It should instead read::
+
+    1. For each terminal a in FIRST(α), add A → α to M[A, a].
+
+Specifically, the terminals looped over come from the production, not
+from the derived symbol.
+
+This is manifested and shown here, but NOT PROVEN!!! I offer no *proof*
+that I am correct, only evidence in the form of an implementation that
+works with the correction and doesn't work without it. In particular,
+I cannot (or do not wish to spend the time to) prove that my
+implementation isn't broken in just such a way to mask the true behavior.
+
+To see the effects, after installing Python 3.0, go to the root directory
+of this branch and execute::
+
+    $ python3 setup.py nosetests
+
+You should get the following error (along with a stack trace, ommmited)::
+
+    ======================================================================
+    ERROR: ll.py: Test a basic LL(1) grammar
+    ----------------------------------------------------------------------
+        ...
+    pcc.parser.ParsingError: Expected LITERAL but found 2 on line 1 at
+    position 1
+
+If you switch to the 0.1 release, which is identical to this branch but
+with the correction I have provided, you should see that this test passes
+without failure. (The exact diff is provided as an addendum below the
+footer of this note.)
+
+If you believe I am in error, please do submit a ticket (or even better,
+a push request with a patch) to the github project page, which can be
+found at this address::
+
+    https://github.com/eblume/pcc
+
+Be sure to submit patches to the 'algorithm_test' branch if it relates to
+this issue.
+
+Thanks,
+Erich Blume
+<blume.erich@gmail.com>
+13 January 2012
+
+--------------------------
+Addendum: Patch that *introduces* the erratum from algorithm 4.31::
+
+    diff --git a/pcc/ll.py b/pcc/ll.py
+    index bda535d..159405d 100644
+    --- a/pcc/ll.py
+    +++ b/pcc/ll.py
+    @@ -164,7 +164,8 @@ class LLParser(Parser):
+             # construct the parsing table
+             for symbol, rules in self.productions.items():
+                 for rule,action in rules:
+    -                for term in self.first(rule): # either rule or symbol (GULP)
+    +                for term in self.first(SymbolString((symbol,))):
+    +                    # either rule or symbol (GULP)
+                         self.ptable[symbol][term].append((rule,action))
+                     if EPSILON in self.first(rule):
+                         for term in self.follow(symbol):
+
+Please excuse the comment in the code, in hindsight it's a little silly
+to have left it in this long.
+
