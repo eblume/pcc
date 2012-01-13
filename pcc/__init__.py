@@ -38,5 +38,5 @@ utilize the ``Lexer`` class from ``pcc.lexer``.
 #   -beta: Software is currently in a 'special' (beta) release.
 # No suffix means that the software is currently in an official release state.
 
-VERSION_INFO=("0","0.1-dev")
+VERSION_INFO=("0","0.1")
 

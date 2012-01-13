@@ -59,8 +59,7 @@ class LLParser(Parser):
 
         # Wrap up start_production stuff
         if start_production:
-            rule_symbols += EOF
-            self.start = (symbol,rule_symbols,action)
+            self.start = (symbol,rule_symbols+EOF,action)
 
         # Add the final production to the production table
         if symbol not in self.productions:
@@ -120,12 +119,6 @@ class LLParser(Parser):
             added_something_flag = False
             for symbol, rules in self.productions.items():
                 for rule,action in rules:
-                    # Special edge case - for the start production,
-                    # trim off EOF here. The algorithm assumes EOF
-                    # isn't part of a "sentential form".
-                    if rule[len(rule)-1] == EOF:
-                        rule = rule[:len(rule)-1]
-
                     for index in range(len(rule)):
                         rule_symbol = rule[index]
                         if rule_symbol.terminal():
@@ -296,7 +289,7 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
                  (symbol.name == "LITERAL" and not symbol.match(next.match,0))
                ):
                 raise ParsingError('Expected {} but found {} on line {} at '
-                    'position {}'.format( symbol.name, next.token.name,
+                    'position {}'.format( symbol.name, next.match,
                     next.line, next.position))
             
             input_values.append(next.match)
