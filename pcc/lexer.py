@@ -39,12 +39,14 @@ class Lexer:
     can still have tokens with whitespace due to the greedy nature of
     pattern matching.
 
-    If `report_literals` is left True, a token that matches one (and only one)
-    non-whitespace character will be added. This accomplishes two things: it
-    helps (particularly alongside ignore_whitespace) to avoid ``lex()`` ever
-    raising an error because no rule matches the input stream, and it also
-    allows your parser to interpret literal strings in a grammar. This token
-    will be called LITERAL, and `silent` will be (of course) off.
+    If `report_literals` is left True, then special behavior is added to the
+    case that no defined token matches the next bit of input. When False,
+    ValueError will be raised. When True, a special token named 'LITERAL' will
+    be returned with the next **single** input character as its matching
+    lexeme. This is helpful for grammar parsers (see ``pcc.parser``) to define
+    rules with custom literal symbols rather than creating an explicit token
+    for each one. If you want to have a multi-character string literal, just
+    define a token with the 'rule' as exactly the text you want to match.
 
     >>> p = Lexer()
     >>> p.addtoken(name='NAME',rule=r'[_a-zA-Z][_a-zA-Z0-9]+')
@@ -78,8 +80,12 @@ class Lexer:
     def __init__(self, ignore_whitespace=True, ignore_newlines=True,
                  report_literals=True):
         self.tokens = {}
+        self.report_literals = report_literals
 
         if report_literals:
+            # Keep in mind that the LITERAL token is special and isn't
+            # actually 'searched' for - it is simply dropped in if no other
+            # token can match the input.
             self.addtoken(name='LITERAL',rule=r'\S')
 
         if ignore_whitespace:
@@ -134,22 +140,27 @@ class Lexer:
         while position < end:
                       # This is a tuple (name,match_object,silent_flag)
             matches = [(token, token.match(input,position))
-                       for token in self.tokens ]
+                       for token in self.tokens.values()
+                       if not self.report_literals or token.name != "LITERAL"]
             # Prune out all non-matches and 0-length matches
             matches = [(token,match) for token,match in matches
                        if match and len(match) > 0 ]
-            if len(matches) == 0:
-                raise ValueError('No token was found at line {} position '
-                                 '{}.'.format(line,line_pos))
             # Sort the matches by match length, descending.
             matches.sort(reverse= True, key=lambda x: len(x[1]))
 
-            # Pull out the top match
-            #     TODO: are we sure we want to do this, or rather Error?
-            top_token, top_match = matches[0]
+            if len(matches) == 0:
+                if self.report_literals:
+                    top_token = self.tokens['LITERAL']
+                    top_match = input[position]
+                else:
+                    raise ValueError('No token was found at line {} position '
+                                 '{}.'.format(line,line_pos))
+            else:
+                # Pull out the top match
+                top_token, top_match = matches[0]
 
             if not top_token.silent:
-                yield Lexeme(top_token,top_match,line,line_pos)
+                yield symbols.Lexeme(top_token,top_match,line,line_pos)
 
             # Advance line and line_pos as needed.
             line_count = top_match.count("\n")
@@ -162,15 +173,3 @@ class Lexer:
             position += len(top_match)
             
             
-    
-class Lexeme:
-    """Input (string) that has been matched to some ``Token``.
-
-    Every ``Lexeme`` object has the fields ``token``, ``match``, ``line``, and
-    ``position``.
-    """
-    def __init__(self, token, match, line, position):
-        self.token = token
-        self.match = match
-        self.line = line
-        self.position = position
