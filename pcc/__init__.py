@@ -33,10 +33,10 @@ utilize the ``Lexer`` class from ``pcc.lexer``.
 # 
 # Release is in the form A.B where A is the Version and B is the minor version.
 # Release may have any of the following suffixes:
-#   -dev : Software is currently in a development (alpha) phase.
-#   -rc# : Software is prepared for release, and is the #'th release candidate.
+#   dev : Software is currently in a development (alpha) phase.
+#   rc# : Software is prepared for release, and is the #'th release candidate.
 #   -beta: Software is currently in a 'special' (beta) release.
 # No suffix means that the software is currently in an official release state.
 
-VERSION_INFO=("0","0.2-dev")
+VERSION_INFO=("0","0.2dev")
 
