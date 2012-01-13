@@ -111,5 +111,23 @@ class LLTester(unittest.TestCase):
         correct_names = {'\\*':'LITERAL', '\\)':'LITERAL', '\\+':'LITERAL',
                          "$":'_EOF'}
         self.assertEqual(names,correct_names)
+
+    def test_grammar(self):
+        """ll.py: Test a basic LL(1) grammar"""
+        # Grammar 4.28 in Aho, Ullman et al (except NUM instead of id)
+        lexer = Lexer()
+        lexer.addtoken(name='NUM',rule=r'[0-9]+')
+        p = ll.LLParser(lexer)
+        p.ap('E','T EP', lambda x: x[0] + x[1], start_production=True)
+        p.ap('EP',"'+' T EP", lambda x: x[1] + x[2])
+        p.ap('EP',"", lambda x: 0)
+        p.ap('T',"F TP", lambda x: x[0] * x[1])
+        p.ap('TP',"'*' F TP", lambda x: x[1] * x[2])
+        p.ap('TP',"", lambda x: 1)
+        p.ap('F',"'(' E ')'", lambda x: x[1])
+        p.ap('F',"NUM", lambda x: int(x[0]))
+    
+        self.assertEqual(p.parse("2+3*4"),14)
+        
         
 

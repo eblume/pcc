@@ -150,8 +150,8 @@ class Lexer:
 
             if len(matches) == 0:
                 if self.report_literals:
-                    top_token = self.tokens['LITERAL']
                     top_match = input[position]
+                    top_token = symbols.Token('LITERAL',re.escape(top_match))
                 else:
                     raise ValueError('No token was found at line {} position '
                                  '{}.'.format(line,line_pos))

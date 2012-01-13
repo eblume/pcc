@@ -256,8 +256,7 @@ class LLParser(Parser):
             self.finalize()
         lexer = _LexemeIterator(self.lexer,input)
         start_symbol, start_rule, start_action = self.start
-        value = _rd_parse_rule(start_rule,start_action,lexer,self.ptable)
-        return value
+        return _rd_parse_rule(start_rule,start_action,lexer,self.ptable)
         
 def _make_symbol(lexer,name):
     """Helper function to symbolize the elements of a production's rule"""
@@ -294,7 +293,7 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
     
             # if the wrong token is lexed:
             if ( next.token != symbol or
-                 (symbol.name == "LITERAL" and not symbol.match(next.match))
+                 (symbol.name == "LITERAL" and not symbol.match(next.match,0))
                ):
                 raise ParsingError('Expected {} but found {} on line {} at '
                     'position {}'.format( symbol.name, next.token.name,
