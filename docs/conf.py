@@ -189,7 +189,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'pcc.tex', 'pcc Documentation',
+  ('index', 'pcc.tex', 'Python Compiler Compiler (pcc)',
    r'\\'.join('{} <{}>'.format(author,email) for author,email in AUTHORS),
    'manual'),
 ]

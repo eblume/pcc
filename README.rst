@@ -1,4 +1,5 @@
-Python Compiler Compiler (pcc)
+Python Compiler Compiler (``pcc``)
+=============================
 
 Context Free Grammar parsers for Python 3
 
@@ -23,11 +24,48 @@ You should have received a copy of the GNU General Public License
 along with pcc, in a file called COPYING.  If not, see
 <http://www.gnu.org/licenses/>.
 
+About This Document
+-------------------
+
+The documentation for ``pcc`` is generated automatically. The first section of
+the official documentation comes directly from the ``README.rst`` file at the
+root level of the ``pcc`` project - and you may in fact be reading from that
+file right now! Alternately, you could be reading from "pcc.pdf", which is the
+full documentation for ``pcc``.
+
+How to use "pcc.pdf"
+~~~~~~~~~~~~~~~~~~~~
+
+The first section of "pcc.pdf" comes directly from ``README.rst``, and you are
+reading it now. The second section is the Cookbook - **new developers will
+(hopefully) find the Cookbook as a helpful place to start.** The Cookbook
+contains color-coded and well-explained code examples on how to use ``pcc``.
+
+Finally, the third section (entitled "``pcc`` Package") is the automatically
+generated API documentation that comes directly from the code itself. Notably,
+any code examples in this section are actually executed as part of the testing
+suite (see Testing, below). One thing to note about this documentation is that
+you can generally skip any module with "_test" at the end of its name - this
+denotes a module that contains only unit test cases, and thus isn't of much
+use to anyone other than a ``pcc`` developer.
+
+How to regenerate "pcc.pdf"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you suspect your documentation is out of date, you can re-generate it by
+going in to the ``docs/`` subdirectory of this project and executing::
+
+    $ make pcc
+
+Assuming you have all the required packages (LaTeX and Sphinx are both required,
+for instance - although some python packages may hopefully install themselves)
+the "pcc.pdf" file will be updated automatically.
+
 Installation
 ------------
 
-pcc uses ``distribute``, a ``setuptools``-like distribution wrapper, to automate
-installation.
+``pcc`` uses ``distribute``, a ``setuptools``-like distribution wrapper, to
+automate installation.
 
 Requirements
 ~~~~~~~~~~~~
@@ -67,29 +105,12 @@ No errors should be reported by this process. Also note that while setuptools
 may report that there is a ``tests`` command, this has not been configured - use
 ``nosetests`` instead.
 
-Documentation
--------------
-
-Please see "pcc.pdf" at the root project directory for the complete
-documentation. The ``docs`` directory can be ignored unless you wish to edit or
-regenerate the documentation from the source.
-
-To regenerate the documentation (generally only performed by me before a
-release), go to the ``docs`` directory and execute the following command::
-
-    $ make pcc
-
-This will automatically (using `Sphinx <http://sphinx.pocoo.org/>`_) scan the
-source code, build the API documentation in to ReStructuredText, transcribe the
-docs to LaTeX, and compile the LaTeX source in to "pcc.pdf" at the project's
-root directory.
-
 Release History
 ---------------
 
 No release has been made yet. How cool are you?
 
-Contribution
+Contributing
 ------------
 
 See AUTHORS for a (hopefully) complete list of all contributors to this project.
@@ -97,7 +118,7 @@ Please add your name and - if you like - your email to the list if you
 contributed anything you felt was meaningul to the project.
 
 For tips and procedures on how to contribute - or to report a bug or leave
-feedback - please visit the pcc project page on
+feedback - please visit the ``pcc`` project page on
 `github <https://github.com/eblume/pcc>`_. Please feel free to be bold in
 submitting patches, tickets, or push requests - I won't be offended and would
 greatly appreciate the effort!
