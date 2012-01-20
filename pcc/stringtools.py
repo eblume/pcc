@@ -21,7 +21,8 @@
 
 import itertools
 
-def unique_string(existing,length=6,lower=True,upper=False,number=False):
+def unique_string(existing,length=6,lower=True,upper=False,number=False,
+                  prefix=None, suffix=None):
     """Generate a new string that is not a member of `existing`.
 
     `existing` should be a set, but any object that supports the *in* syntax for
@@ -34,20 +35,30 @@ def unique_string(existing,length=6,lower=True,upper=False,number=False):
     True, numbers will be used. These options may be combined. At least one
     must be turned on.
 
+    If `prefix` or `suffix` are set to some string, then that string will be
+    prepended or appended to every generated string before testing for
+    uniqueness. The result will be a prefixed and/or suffixed string with some
+    random kernel, in which the kernel alone is the length specified by
+    `length`. In other words, `length` does not apply to the prefix or the
+    suffix.
+
     >>> pre = {'one','two','another_string',"Any length works","sixsix"}
     >>> unique_string(pre) in pre
     False
     >>> unique_string(pre,upper=True) in pre
     False
-    >>> unique_string(pre,lower=False)
+    >>> unique_string(pre,lower=False) in pre
     Traceback (most recent call last):
         ...
     ValueError: You must specify at least one of the generating sets
     >>> pre = {"0","1","2","3","4","5","6","7","8","9"}
-    >>> unique_string(pre,lower=False,number=True,length=1)
+    >>> unique_string(pre,lower=False,number=True,length=1) in pre
     Traceback (most recent call last):
         ...
     ValueError: The specified existing set is already full for this length
+    >>> unique_string(pre,lower=False,number=True,length=1,prefix="_",
+    ... suffix="_") in pre
+    False
     """
     gen_set = ""
     if lower:
@@ -62,6 +73,10 @@ def unique_string(existing,length=6,lower=True,upper=False,number=False):
 
     for gen in itertools.product(gen_set,repeat=length):
         gen = "".join(gen)
+        if prefix:
+            gen = prefix + gen
+        if suffix:
+            gen = gen + suffix
         if gen not in existing:
             return gen
     
