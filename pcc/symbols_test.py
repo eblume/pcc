@@ -44,6 +44,9 @@ class SymbolTester(unittest.TestCase):
         with self.assertRaises(ValueError):
             a = sy.Symbol("")
 
+        with self.assertRaises(ValueError):
+            a = sy.Symbol("TOKEN_NAME")
+
 class TokenTester(unittest.TestCase):
     """Test harness for the ``pcc.symbols.Token`` class."""
 
@@ -63,6 +66,18 @@ class TokenTester(unittest.TestCase):
         self.assertEqual(b.match("banana 42",7),"42")
 
         self.assertTrue(a.terminal())
+
+    def test_badname(self):
+        """symbols.py: Test invalid token names"""
+
+        with self.assertRaises(ValueError):
+            a = sy.Token("_BADNAME","test")
+
+        with self.assertRaises(ValueError):
+            a = sy.Token("","test")
+
+        with self.assertRaises(ValueError):
+            a = sy.Token("symbol_name","test")
 
 class SymbolStringTester(unittest.TestCase):
     """Test harness for the ``pcc.symbols.SymbolString`` class."""

@@ -22,8 +22,8 @@
 import re
 import itertools
 
-SYMBOL_MATCH_RULE = r'[a-zA-Z][_a-zA-Z0-9]*'
-_SYMBOL_REGEXP = re.compile(SYMBOL_MATCH_RULE)
+SYMBOL_MATCH_RULE = r'[a-z][_a-z]*'
+TOKEN_MATCH_RULE = r'[A-Z][_A-Z]*'
 
 class Symbol:
     """Terminal or nonterminal member of a grammar.
@@ -33,11 +33,13 @@ class Symbol:
     behavior as needed.
 
     `name` may be anything that matches ``SYMBOL_MATCH_RULE``, a string that
-    is used as a regular expression by this module.
+    is used as a regular expression by this module. By default, this is any
+    series of **lowercase** letters and underscores that starts with a single
+    lowercase letter.
     """
 
     def __init__(self,name):
-        if not _SYMBOL_REGEXP.match(name):
+        if not re.match(SYMBOL_MATCH_RULE,name):
             raise ValueError('Invalid Symbol name: {}'.format(name))
         self.name = name
 
@@ -55,6 +57,11 @@ class Symbol:
 
 class Token(Symbol):
     """Terminal Symbol
+
+    `name` must be anything that matches ``TOKEN_MATCH_RULE``, a string that
+    is used as a regular expression by this module. By default, this is any
+    series of **uppercase** letters and underscores that starts with a single
+    uppercase letter.
 
     `rule` is a string that will be used as a regular expression to lex input
     by ``pcc.lexer``. To avoid lexing issues, use only basic regular expression
@@ -74,7 +81,9 @@ class Token(Symbol):
     """
 
     def __init__(self, name, rule, silent = False):
-        super().__init__(name)
+        if not re.match(TOKEN_MATCH_RULE,name):
+            raise ValueError("Invalid Token name: {}".format(name))
+        self.name = name
         self.rule = re.compile(rule)
         self.silent = silent
 
@@ -155,10 +164,10 @@ class Lexeme:
         self.position = position
 
 
-EPSILON = Token("fake",r"")
+EPSILON = Token("FAKE",r"")
 EPSILON.name = "_EPSILON"
 EPSILON.__doc__ = "Special ``Token`` to represent an empty string for grammars"
-EOF = Token("fake",r"$")
+EOF = Token("FAKE",r"$")
 EOF.name = "_EOF"
 EOF.__doc__ = "Special ``Token`` to represent the end of the input."
 

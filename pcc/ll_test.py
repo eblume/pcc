@@ -35,18 +35,18 @@ class LLTester(unittest.TestCase):
         lexer = Lexer()
         lexer.addtoken(name='NUM',rule=r'[0-9]+')
         p = ll.LLParser(lexer)
-        p.ap('E','T EP', lambda x: x[0] + x[1], start_production=True)
-        p.ap('EP',"'+' T EP", lambda x: x[1] + x[2])
-        p.ap('EP',"", lambda x: 0)
-        p.ap('T',"F TP", lambda x: x[0] * x[1])
-        p.ap('TP',"'*' F TP", lambda x: x[1] * x[2])
-        p.ap('TP',"", lambda x: 1)
-        p.ap('F',"'(' E ')'", lambda x: x[1])
-        p.ap('F',"NUM", lambda x: int(x[0]))
+        p.ap('e','t ep', lambda x: x[0] + x[1], start_production=True)
+        p.ap('ep',"'+' t ep", lambda x: x[1] + x[2])
+        p.ap('ep',"", lambda x: 0)
+        p.ap('t',"f tp", lambda x: x[0] * x[1])
+        p.ap('tp',"'*' f tp", lambda x: x[1] * x[2])
+        p.ap('tp',"", lambda x: 1)
+        p.ap('f',"'(' e ')'", lambda x: x[1])
+        p.ap('f',"NUM", lambda x: int(x[0]))
         
-        first_f = p.first(SymbolString((Symbol('F'),)))
-        first_t = p.first(SymbolString((Symbol('T'),)))
-        first_e = p.first(SymbolString((Symbol('E'),)))
+        first_f = p.first(SymbolString((Symbol('f'),)))
+        first_t = p.first(SymbolString((Symbol('t'),)))
+        first_e = p.first(SymbolString((Symbol('e'),)))
 
         self.assertTrue(first_f == first_t == first_e)
         self.assertEqual(len(first_f),2)
@@ -55,7 +55,7 @@ class LLTester(unittest.TestCase):
         correct_names = {'LITERAL':'\\(', 'NUM':'[0-9]+'}
         self.assertEqual(names, correct_names)
 
-        first_ep = p.first(SymbolString((Symbol('EP'),)))
+        first_ep = p.first(SymbolString((Symbol('ep'),)))
 
         self.assertEqual(len(first_ep),2)
         
@@ -63,7 +63,7 @@ class LLTester(unittest.TestCase):
         correct_names = {'LITERAL':'\\+', '_EPSILON': ''}
         self.assertEqual(names,correct_names)
 
-        first_tp = p.first(SymbolString((Symbol('TP'),)))
+        first_tp = p.first(SymbolString((Symbol('tp'),)))
 
         self.assertEqual(len(first_tp),2)
 
@@ -77,17 +77,17 @@ class LLTester(unittest.TestCase):
         lexer = Lexer()
         lexer.addtoken(name='NUM',rule=r'[0-9]+')
         p = ll.LLParser(lexer)
-        p.ap('E','T EP', lambda x: x[0] + x[1], start_production=True)
-        p.ap('EP',"'+' T EP", lambda x: x[1] + x[2])
-        p.ap('EP',"", lambda x: 0)
-        p.ap('T',"F TP", lambda x: x[0] * x[1])
-        p.ap('TP',"'*' F TP", lambda x: x[1] * x[2])
-        p.ap('TP',"", lambda x: 1)
-        p.ap('F',"'(' E ')'", lambda x: x[1])
-        p.ap('F',"NUM", lambda x: int(x[0]))
+        p.ap('e','t ep', lambda x: x[0] + x[1], start_production=True)
+        p.ap('ep',"'+' t ep", lambda x: x[1] + x[2])
+        p.ap('ep',"", lambda x: 0)
+        p.ap('t',"f tp", lambda x: x[0] * x[1])
+        p.ap('tp',"'*' f tp", lambda x: x[1] * x[2])
+        p.ap('tp',"", lambda x: 1)
+        p.ap('f',"'(' e ')'", lambda x: x[1])
+        p.ap('f',"NUM", lambda x: int(x[0]))
 
-        follow_e = p.follow(Symbol('E'))
-        follow_ep = p.follow(Symbol('EP'))
+        follow_e = p.follow(Symbol('e'))
+        follow_ep = p.follow(Symbol('ep'))
         self.assertEqual(len(follow_e),2)
         self.assertEqual(follow_e,follow_ep)
 
@@ -95,8 +95,8 @@ class LLTester(unittest.TestCase):
         correct_names = {'LITERAL':'\\)', '_EOF':"$"}
         self.assertEqual(names,correct_names)
 
-        follow_t = p.follow(Symbol('T'))
-        follow_tp = p.follow(Symbol('TP'))
+        follow_t = p.follow(Symbol('t'))
+        follow_tp = p.follow(Symbol('tp'))
         self.assertEqual(len(follow_t),3)
         self.assertEqual(follow_t,follow_tp)
 
@@ -104,7 +104,7 @@ class LLTester(unittest.TestCase):
         correct_names = {'\\)':'LITERAL', '\\+':'LITERAL', "$":'_EOF'}
         self.assertEqual(names,correct_names)
 
-        follow_f = p.follow(Symbol('F'))
+        follow_f = p.follow(Symbol('f'))
         self.assertEqual(len(follow_f),4)
         
         names = {t.rule.pattern: t.name for t in follow_f}
@@ -118,14 +118,14 @@ class LLTester(unittest.TestCase):
         lexer = Lexer()
         lexer.addtoken(name='NUM',rule=r'[0-9]+')
         p = ll.LLParser(lexer)
-        p.ap('E','T EP', lambda x: x[0] + x[1], start_production=True)
-        p.ap('EP',"'+' T EP", lambda x: x[1] + x[2])
-        p.ap('EP',"", lambda x: 0)
-        p.ap('T',"F TP", lambda x: x[0] * x[1])
-        p.ap('TP',"'*' F TP", lambda x: x[1] * x[2])
-        p.ap('TP',"", lambda x: 1)
-        p.ap('F',"'(' E ')'", lambda x: x[1])
-        p.ap('F',"NUM", lambda x: int(x[0]))
+        p.ap('e','t ep', lambda x: x[0] + x[1], start_production=True)
+        p.ap('ep',"'+' t ep", lambda x: x[1] + x[2])
+        p.ap('ep',"", lambda x: 0)
+        p.ap('t',"f tp", lambda x: x[0] * x[1])
+        p.ap('tp',"'*' f tp", lambda x: x[1] * x[2])
+        p.ap('tp',"", lambda x: 1)
+        p.ap('f',"'(' e ')'", lambda x: x[1])
+        p.ap('f',"NUM", lambda x: int(x[0]))
     
         self.assertEqual(p.parse("2+3*4"),14)
         self.assertEqual(p.parse("5"),5)
