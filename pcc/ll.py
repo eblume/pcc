@@ -146,30 +146,32 @@ class LLParser(Parser):
         self.FIRST = {}
         self.FOLLOW = {symbol: set() for symbol in self.productions}
         self.FOLLOW[self.start[0]] |= {EOF}
-        added_something_flag = True
-        while added_something_flag:
-            added_something_flag = False
-            for symbol, rules in self.productions.items():
-                for rule,action in rules:
-                    for index in range(len(rule)):
-                        rule_symbol = rule[index]
-                        if rule_symbol.terminal():
-                            continue
-                        follow_set = self.FOLLOW[rule_symbol]
-                        if index < len(rule)-1:
-                            # "if there is more in this string"
-                            first_set = self.first(rule[index+1:])
-                            added_something_flag |= _update_follow(
-                                follow_set,first_set)
-                            if EPSILON in first_set:
-                                symbol_follow = self.FOLLOW[symbol]
-                                added_something_flag |= _update_follow(
-                                    follow_set,symbol_follow)
-                        elif index == len(rule)-1:
-                            # The last symbol in the rule
+
+        # Fill the FIRST and FOLLOW sets implicitly and explicitly respectively
+        # This rather complicated algorithm comes from the Purple Dragon Book,
+        # see the section on creating FOLLOW sets.
+        for symbol, rules in self.productions.items():
+            for rule,action in rules:
+                for index in range(len(rule)):
+                    # This triple-nested for loop can be red as:
+                    #   "Loop over every suffix of every rule in the grammar."
+                    rule_symbol = rule[index]
+                    if rule_symbol.terminal():
+                        continue
+                    follow_set = self.FOLLOW[rule_symbol]
+                    if index < len(rule)-1:
+                        # "if there is more in this string"
+                        first_set = self.first(rule[index+1:])
+                        follow_set |= first_set
+                        if EPSILON in first_set:
                             symbol_follow = self.FOLLOW[symbol]
-                            added_something_flag |= _update_follow(
-                                follow_set, symbol_follow)
+                            follow_set |= symbol_follow
+                    elif index == len(rule)-1:
+                        # The last symbol in the rule
+                        symbol_follow = self.FOLLOW[symbol]
+                        follow_set |= symbol_follow
+                    # Remove EPSILON, which may have snuck in.
+                    follow_set -= {EPSILON}
 
     def error_check(self):
         """Raise GrammarError if the grammar is not LL(1).
@@ -473,14 +475,6 @@ class _LexemeIterator:
         result = self.next_symbol
         self.scan()
         return result
-
-def _update_follow(a,b):
-    "Add new elements EXCEPT EPSILON from b to a. Return True if not no-op."
-    b = b - {EPSILON}
-    if b - a:
-        a |= b
-        return True
-    return False
                         
 
 
