@@ -188,6 +188,7 @@ class LLParser(Parser):
         if not self.finalized:
             self.finalize()
 
+        # This is another algorithm straight out of the PDB.
         for symbol, rules in self.productions.items():
             # Detect the case that there are nonterminals without productions
             if len(rules) == 0:
@@ -291,7 +292,8 @@ class LLParser(Parser):
 
         Due to the constraint programming approach used to calculate the
         FOLLOW sets in this implementation, this function merely returns the
-        pre-computed set - the actual set computation occurs in finalize()
+        pre-computed set - the actual set computation occurs in
+        ``initialize_sets()``.
         """
         if not self.finalized: 
             self.finalize()
