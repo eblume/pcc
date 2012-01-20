@@ -12,7 +12,7 @@ import unittest
 
 import pcc.ll as ll
 from pcc.lexer import Lexer
-from pcc.symbols import Symbol, SymbolString
+from pcc.symbols import Symbol, SymbolString, Token
 import re
 
 class LLTester(unittest.TestCase):
@@ -133,5 +133,35 @@ class LLTester(unittest.TestCase):
         self.assertEqual(p.parse("(5+2)"),7)
         self.assertEqual(p.parse("1+((((((((((3))))))))))"),4)
         
+    def test_symbolize(self):
+        """ll.py: Test converting a rule string in to a SymbolString"""
+
+        # SKIP FOR NOW
+        return
+        
+        lexer = Lexer()
+        lexer.addtoken(name='NUM',rule=r'[0-9]+')
+        p = ll.LLParser(lexer)
+
+        s_string = p.symbolize("a b c d")
+        self.assertEqual(len(s_string),4)
+        for symbol in s_string:
+            self.assertTrue(isinstance(symbol,Symbol))
+            self.assertFalse(isinstance(symbol,Token))
+            self.assertFalse(symbol.terminal())
+
+        s_string = p.symbolize("NUM NUM NUM")
+        self.assertEqual(len(s_string),3)
+        for symbol in s_string:
+            self.assertTrue(isinstance(symbol,Symbol))
+            self.assertTrue(isinstance(symbol,Token))
+            self.assertTrue(symbol.terminal())
+            self.assertEqual(symbol,Token("NUM",r'[0-9]+'))
+
+        s_string = p.symbolize(" '(~''' NUM '~)''' ")
+        self.assertEqual(len(s_string),3)
+        self.assertTrue(isinstance(s_string[0]),Token)
+        match_str = s_string[0].match("(~''")
+        self.assertEqual(len(match_str),4)
         
 
