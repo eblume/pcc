@@ -39,15 +39,6 @@ class Lexer:
     can still have tokens with whitespace due to the greedy nature of
     pattern matching.
 
-    If `report_literals` is left True, then special behavior is added to the
-    case that no defined token matches the next bit of input. When False,
-    ValueError will be raised. When True, a special token named 'LITERAL' will
-    be returned with the next **single** input character as its matching
-    lexeme. This is helpful for grammar parsers (see ``pcc.parser``) to define
-    rules with custom literal symbols rather than creating an explicit token
-    for each one. If you want to have a multi-character string literal, just
-    define a token with the 'rule' as exactly the text you want to match.
-
     >>> p = Lexer()
     >>> p.addtoken(name='NAME',rule=r'[_a-zA-Z][_a-zA-Z0-9]+')
     >>> p.addtoken(name='REAL_NUMBER',
@@ -58,7 +49,7 @@ class Lexer:
     ... 3.14159 foo
     ... bar sameline
     ... _Long_Identifier_ banana
-    ... ocelot!!
+    ... ocelot
     ... '''
     >>> for lexeme in p.lex(input):
     ...     print("{} > {} | {},{}".format(lexeme.token.name, lexeme.match,
@@ -73,20 +64,10 @@ class Lexer:
     NAME > _Long_Identifier_ | 4,1
     NAME > banana | 4,19
     NAME > ocelot | 5,1
-    LITERAL > ! | 5,7
-    LITERAL > ! | 5,8
 
     """
-    def __init__(self, ignore_whitespace=True, ignore_newlines=True,
-                 report_literals=True):
+    def __init__(self, ignore_whitespace=True, ignore_newlines=True):
         self.tokens = {}
-        self.report_literals = report_literals
-
-        if report_literals:
-            # Keep in mind that the LITERAL token is special and isn't
-            # actually 'searched' for - it is simply dropped in if no other
-            # token can match the input.
-            self.addtoken(name='LITERAL',rule=r'\S')
 
         if ignore_whitespace:
             self.addtoken(name='WHITESPACE',rule=r'\s+', silent=True)
@@ -123,9 +104,6 @@ class Lexer:
             raise ValueError('Token {} already exists.'.format(token))
 
         self.tokens[token.name] = token
-        
-
-        
 
     def lex(self,input):
         """Generator that produces ``Lexeme`` objects from the input string."""
@@ -140,8 +118,7 @@ class Lexer:
         while position < end:
                       # This is a tuple (name,match_object,silent_flag)
             matches = [(token, token.match(input,position))
-                       for token in self.tokens.values()
-                       if not self.report_literals or token.name != "LITERAL"]
+                       for token in self.tokens.values()]
             # Prune out all non-matches and 0-length matches
             matches = [(token,match) for token,match in matches
                        if match and len(match) > 0 ]
@@ -149,11 +126,7 @@ class Lexer:
             matches.sort(reverse= True, key=lambda x: len(x[1]))
 
             if len(matches) == 0:
-                if self.report_literals:
-                    top_match = input[position]
-                    top_token = symbols.Token('LITERAL',re.escape(top_match))
-                else:
-                    raise ValueError('No token was found at line {} position '
+                raise ValueError('No token was found at line {} position '
                                  '{}.'.format(line,line_pos))
             else:
                 # Pull out the top match

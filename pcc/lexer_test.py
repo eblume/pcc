@@ -69,24 +69,4 @@ class LexerTester(unittest.TestCase):
         self.assertEqual(len(lexemes),1)
         self.assertEqual(lexemes[0].token.name,"TWO")
 
-    def test_literal(self):
-        """lexer.py: Test string literals"""
-        literals = fl.Lexer(report_literals=True)
-        no_literals = fl.Lexer(report_literals=False)
-
-        for lexer in (literals,no_literals):
-            lexer.addtoken(name='NUMBER',rule='[0-9]+')
-
-        input = '1 2 ! 3'
-        
-        lexemes = [t for t in literals.lex(input)]
-        self.assertEqual(len(lexemes),4)
-        self.assertEqual(lexemes[2].token.name,"LITERAL")
-        self.assertEqual(lexemes[2].match,"!")
-        self.assertEqual(lexemes[3].token.name,"NUMBER")
-        self.assertEqual(lexemes[3].match,"3")
-        
-        with self.assertRaises(ValueError):
-            lexemes = [t for t in no_literals.lex(input)]
-        
 
