@@ -51,25 +51,13 @@ class LLTester(unittest.TestCase):
         self.assertTrue(first_f == first_t == first_e)
         self.assertEqual(len(first_f),2)
 
-        names = {t.name: t.rule.pattern for t in first_f}
-        correct_names = {'LITERAL':'\\(', 'NUM':'[0-9]+'}
-        self.assertEqual(names, correct_names)
-
         first_ep = p.first(SymbolString((Symbol('ep'),)))
 
         self.assertEqual(len(first_ep),2)
         
-        names = {t.name: t.rule.pattern for t in first_ep}
-        correct_names = {'LITERAL':'\\+', '_EPSILON': ''}
-        self.assertEqual(names,correct_names)
-
         first_tp = p.first(SymbolString((Symbol('tp'),)))
 
         self.assertEqual(len(first_tp),2)
-
-        names = {t.name: t.rule.pattern for t in first_tp}
-        correct_names = {'LITERAL':'\\*', '_EPSILON': ''}
-        self.assertEqual(names,correct_names)
 
     def test_follow(self):
         """ll.py: Test FOLLOW set creation"""
@@ -91,26 +79,14 @@ class LLTester(unittest.TestCase):
         self.assertEqual(len(follow_e),2)
         self.assertEqual(follow_e,follow_ep)
 
-        names = {t.name: t.rule.pattern for t in follow_e}
-        correct_names = {'LITERAL':'\\)', '_EOF':"$"}
-        self.assertEqual(names,correct_names)
-
         follow_t = p.follow(Symbol('t'))
         follow_tp = p.follow(Symbol('tp'))
         self.assertEqual(len(follow_t),3)
         self.assertEqual(follow_t,follow_tp)
 
-        names = {t.rule.pattern: t.name for t in follow_t}
-        correct_names = {'\\)':'LITERAL', '\\+':'LITERAL', "$":'_EOF'}
-        self.assertEqual(names,correct_names)
-
         follow_f = p.follow(Symbol('f'))
         self.assertEqual(len(follow_f),4)
         
-        names = {t.rule.pattern: t.name for t in follow_f}
-        correct_names = {'\\*':'LITERAL', '\\)':'LITERAL', '\\+':'LITERAL',
-                         "$":'_EOF'}
-        self.assertEqual(names,correct_names)
 
     def test_grammar(self):
         """ll.py: Test a basic LL(1) grammar"""

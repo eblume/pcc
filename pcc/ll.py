@@ -38,27 +38,41 @@ class LLParser(Parser):
         self.terminals = {t for t in lexer.tokens.values()} | {EOF}
 
     def addproduction(self,symbol,rule,action, start_production=False):
+        """Add a production to generate `symbol` using `rule`.
+
+        For convenience, `symbol` is a string which will be the name of the
+        symbol being derived with this production, and `rule` is simply a
+        string in a form similar to BNF form that shows the decleration of the
+        production. See ``LLParser.symbolize()`` for more information on `rule`.
+
+        `action` is any function which takes one list-type argument and
+        returns either None or a single value. This is the *semantic action*
+        for this production. The argument is a list, each element being the
+        value returned by the semantic action of the produciton generating that
+        element's corresponding part of the rule. In the case of terminal
+        symbols, the exact input matched will be used in the argument.
+
+        It is common for `action` to be a lambda expression for simple
+        grammars, but any sort of function may be used.
+
+        `start_production` flags this production as being the one and only
+        (and necessary) production that caps the parse tree. You must, before
+        parsing, declare exactly one `start_production`. If your grammar has
+        multiple 'top-level' productions, simply define a new start production
+        that can be derived from any of your 'top-level' productions.
+        """
         if self.finalized:
             raise ValueError("Can't add a production after finalizing the "
                              "parser (maybe you called parse() too soon?")
 
         symbol = Symbol(symbol)
 
-        if symbol.name in self.lexer.tokens:
-            raise GrammarError('Symbol conflicts with Token name: {}'.format(
-                               symbol.name))
-
         # Initial start_production check
         if self.start is not None and start_production:
             raise GrammarError('A Start production has already been specified.')
 
         # Symbolize the rule
-        rule_symbols=SymbolString([_make_symbol(self.lexer,x)
-                                  for x in rule.split()])
-
-        # Handle epsilon-productions:
-        if len(rule_symbols) == 0:
-            rule_symbols = SymbolString((EPSILON,))
+        rule_symbols = self.symbolize(rule)
 
         # Wrap up start_production stuff
         if start_production:
@@ -68,13 +82,6 @@ class LLParser(Parser):
         if symbol not in self.productions:
             self.productions[symbol] = []
         self.productions[symbol].append((rule_symbols,action))
-
-        # Add any new implicit symbols to the production table
-        for implicit in rule_symbols:
-            if ( not implicit.terminal() and
-                 not implicit in self.productions
-               ):
-                self.productions[implicit] = []
 
         # Add any new string literal tokens to the terminals set
         self.terminals |= { s for s in rule_symbols if s.terminal() }
@@ -332,26 +339,6 @@ class LLParser(Parser):
                                  rule, label))
         return SymbolString(result)
         
-def _make_symbol(lexer,name):
-    """Helper function to symbolize the elements of a production's rule"""
-
-    # If it looks like a string literal, make a literal-like token
-    if len(name)==3 and name[0]=="'" and name[2]=="'":
-        # A quick reminder here that this token is NOT the same as
-        # the token called "LITERAL" that is generated automatically by the
-        # lexer when report_literals is True. This is a sort of Token Template,
-        # and if we get a Lexeme with the lexer's LITERAL token, we check to
-        # see if the matched lexeme text matche's this character.
-        return Token("LITERAL",re.escape(name[1]))
-
-    # If the name is in the lexer's token set, use that token
-    if name in lexer.tokens:
-        return lexer.tokens[name]
-
-    # Otherwise, we assume it's a Symbol. If it's not, then the Symbol
-    # regexp should catch it and barf, which is what we want.
-    return Symbol(name)
-
 def _rd_parse_rule(rule,action,lexer,parse_table):
     """Recursive function to parse the input"""
     input_values = []
