@@ -136,9 +136,6 @@ class LLTester(unittest.TestCase):
     def test_symbolize(self):
         """ll.py: Test converting a rule string in to a SymbolString"""
 
-        # SKIP FOR NOW
-        return
-        
         lexer = Lexer()
         lexer.addtoken(name='NUM',rule=r'[0-9]+')
         p = ll.LLParser(lexer)
@@ -160,8 +157,14 @@ class LLTester(unittest.TestCase):
 
         s_string = p.symbolize(" '(~''' NUM '~)''' ")
         self.assertEqual(len(s_string),3)
-        self.assertTrue(isinstance(s_string[0]),Token)
-        match_str = s_string[0].match("(~''")
+        odd_token = s_string[0]
+        self.assertTrue(isinstance(odd_token,Token))
+        match_str = odd_token.match("(~''",0)
         self.assertEqual(len(match_str),4)
+        
+        s_string = p.symbolize(" NUM '(~''' '+'")
+        self.assertEqual(len(s_string),3)
+        self.assertEqual(odd_token,s_string[1])
+        self.assertNotEqual(odd_token,s_string[2])
         
 

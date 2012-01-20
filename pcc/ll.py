@@ -20,7 +20,9 @@
 # <http://www.gnu.org/licenses/>.
 
 from pcc.parser import Parser, GrammarError, ParsingError
-from pcc.symbols import Symbol, Token, EOF, EPSILON, SymbolString, Lexeme
+from pcc.symbols import (Symbol, Token, EOF, EPSILON, SymbolString, Lexeme,
+                         SYMBOL_MATCH_RULE, TOKEN_MATCH_RULE)
+from pcc.stringtools import unique_string
 
 import itertools
 import re
@@ -32,6 +34,7 @@ class LLParser(Parser):
         self.finalized = False
         self.productions = {}
         self.start = None
+        self.literals = {}
         self.terminals = {t for t in lexer.tokens.values()} | {EOF}
 
     def addproduction(self,symbol,rule,action, start_production=False):
@@ -250,6 +253,84 @@ class LLParser(Parser):
         lexer = _LexemeIterator(self.lexer,input)
         start_symbol, start_rule, start_action = self.start
         return _rd_parse_rule(start_rule,start_action,lexer,self.ptable)
+
+    def symbolize(self,rule):
+        """LLParser.symbolize(string) -> pcc.symbols.SymbolString
+
+        Creates a SymbolString out of a string based shorthand notation.
+        
+        This function identifies tokens, nonterminal symbols, and string
+        literals in the rule and successfully creates the appropriate
+        SymbolString object to represent it. This includes identifying
+        previously defined tokens from this parser's lexer, AND includes
+        creating new tokens out of string literals.
+
+        In short summary, `rule` must be a string containing a whitespace
+        seperated set of token or nonterminal symbol names. The tokens must
+        be predefined by the lexer, but the nonterminals may be brand new.
+
+        Seperate elements (tokens, nonterminals, and literals) of a rule must
+        be seperated by whitespace, but any amount or kind of whitespace may
+        be used. The rule may be empty, and may contain only whitespace - both
+        cases produce an "epsilon" production (that is, a production which
+        matches the empty string).
+
+        A string literal is anything between two apostrophes (') in the rule
+        string. This rule is greedy up to white space - that is, apostrophes
+        themselves may occur between two apostrophes (denoting a string literal
+        that matches an apostrophe at some point), but string literals **cannot
+        contain any whitespace**. If you need to match whitespace, you are
+        better off pre-defining a token that matches that whitespace. In
+        general, you should treat string literals as a convenience, and not as
+        the only way you define tokens.
+
+        If the same string literal is defined twice in any set of rules (ie, in
+        one or more calls to ``symbolize``), the exact same
+        ``pcc.symbols.Token`` object will be generated.
+
+        It is **extremely** important to note that this function has side
+        effects in the parser - it will begin to fill out the production table
+        with implicit symbols and will also add tokens to the lexer.
+        """
+        if self.finalized:
+            raise ValueError("Can't symbolize a rule after finalizing the "
+                             "parser.")
+        rule = rule.split()
+        if not rule:
+            return SymbolString((EPSILON,))
+
+        result = []
+        for label in rule:
+            if label[0] == "'" and label[-1] == "'":
+                # String Literal
+                match_rule = re.escape(label[1:-1])
+                if match_rule in self.literals:
+                    result.append(self.literals[match_rule])
+                else:
+                    new_name = unique_string(self.lexer.tokens,
+                                lower=False,number=False,prefix="LITERAL_")
+                    new_literal = Token(new_name,match_rule)
+                    self.lexer.addtoken(token=new_literal)
+                    self.literals[match_rule] = new_literal
+                    result.append(new_literal)
+            elif re.match(SYMBOL_MATCH_RULE,label):
+                # Symbol
+                symbol = Symbol(label)
+                if not symbol in self.productions:
+                    # Implicit symbol
+                    self.productions[symbol] = []
+                result.append(symbol)
+            elif re.match(TOKEN_MATCH_RULE,label):
+                # Token
+                if label not in self.lexer.tokens:
+                    raise ValueError('Undefined token in rule "{}": "{}"'
+                                     .format(rule,label))
+                result.append(self.lexer.tokens[label])
+    
+            else:
+                raise ValueError('Unknown expression in rule "{}": "{}"'.format(
+                                 rule, label))
+        return SymbolString(result)
         
 def _make_symbol(lexer,name):
     """Helper function to symbolize the elements of a production's rule"""

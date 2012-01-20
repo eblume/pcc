@@ -21,7 +21,7 @@
 
 import itertools
 
-def unique_string(existing,length=6,lower=True,upper=False,number=False,
+def unique_string(existing,length=6,lower=True,upper=True,number=True,
                   prefix=None, suffix=None):
     """Generate a new string that is not a member of `existing`.
 
@@ -45,18 +45,18 @@ def unique_string(existing,length=6,lower=True,upper=False,number=False,
     >>> pre = {'one','two','another_string',"Any length works","sixsix"}
     >>> unique_string(pre) in pre
     False
-    >>> unique_string(pre,upper=True) in pre
+    >>> unique_string(pre,upper=False) in pre
     False
-    >>> unique_string(pre,lower=False) in pre
+    >>> unique_string(pre,lower=False,upper=False,number=False) in pre
     Traceback (most recent call last):
         ...
     ValueError: You must specify at least one of the generating sets
     >>> pre = {"0","1","2","3","4","5","6","7","8","9"}
-    >>> unique_string(pre,lower=False,number=True,length=1) in pre
+    >>> unique_string(pre,lower=False,upper=False,length=1) in pre
     Traceback (most recent call last):
         ...
     ValueError: The specified existing set is already full for this length
-    >>> unique_string(pre,lower=False,number=True,length=1,prefix="_",
+    >>> unique_string(pre,lower=False,upper=False,length=1,prefix="_",
     ... suffix="_") in pre
     False
     """

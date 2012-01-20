@@ -56,7 +56,7 @@ class Symbol:
         return type(self) == type(other) and self.name == other.name
 
 class Token(Symbol):
-    """Terminal Symbol
+    """Terminal Symbol representative object.
 
     `name` must be anything that matches ``TOKEN_MATCH_RULE``, a string that
     is used as a regular expression by this module. By default, this is any
