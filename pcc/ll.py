@@ -353,9 +353,7 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
             next = lexer.poll()
     
             # if the wrong token is lexed:
-            if ( next.token != symbol or
-                 (symbol.name == "LITERAL" and not symbol.match(next.match,0))
-               ):
+            if next.token != symbol:
                 raise ParsingError('Expected {} but found {} on line {} at '
                     'position {}'.format( symbol.name, next.match,
                     next.line, next.position))
