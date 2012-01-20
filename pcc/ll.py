@@ -109,23 +109,42 @@ class LLParser(Parser):
             raise GrammarError('At least one production must be marked as the '
                                'start production.')
 
-        
-        # Initialize the (empty) FIRST and FOLLOW caches
-        self.FIRST = {}
-        self.FOLLOW = {symbol: set() for symbol in self.productions}
+        # Initialize the FIRST and FOLLOW sets, as well as the parse table
+        self.initialize_sets()
+
+        # Grammar error detection
+        self.error_check()
+
+        # construct the parsing table
+        self.construct_ptable()
+
+    def initialize_sets(self):
+        """Construct the FIRST and FOLLOW sets, and initialize the parse table.
+
+        This function finalizes the parser if it has not already been finalized.
+
+        Note that this function will clear any previous FIRST and FOLLOW set
+        calculations. This function does NOT directly calculate the FIRST sets,
+        but rather will implicitly fill them while creating the explicit
+        FOLLOW sets. The definition for ``follow()`` allows for dynamic
+        determination of FIRST sets, which makes this possible.
+
+        Also note that this function will clear any existing parse table, so
+        it is usually a good idea to call ``construct_ptable()`` after calling
+        this function.
+    
+        In general, you don't need to call this function. It will be called
+        during finalization.
+        """
+        if not self.finalized:
+            self.finalize()
 
         # Initialize the parsing table
         self.ptable = {symbol: {terminal: [] for terminal in self.terminals}
                        for symbol in self.productions}
-
-        # Calculate the FOLLOW sets using the dynamic definition of FIRST sets
-        # (Note that this MUST happen before we call self.follow, so it MUST
-        #  happen before the grammar error detection routine)
-        #
-        # This uses Aho et.al.'s definition, in which empty sets are created,
-        # the start symbol's FOLLOW is seeded with EOF, and then one loops over
-        # the entire grammar indefinitely making corrections until the answer
-        # (provably always) converges.
+        # Initialize the (empty) FIRST and FOLLOW caches
+        self.FIRST = {}
+        self.FOLLOW = {symbol: set() for symbol in self.productions}
         self.FOLLOW[self.start[0]] |= {EOF}
         added_something_flag = True
         while added_something_flag:
@@ -138,7 +157,7 @@ class LLParser(Parser):
                             continue
                         follow_set = self.FOLLOW[rule_symbol]
                         if index < len(rule)-1:
-                            # "if there is more in this string
+                            # "if there is more in this string"
                             first_set = self.first(rule[index+1:])
                             added_something_flag |= _update_follow(
                                 follow_set,first_set)
@@ -152,7 +171,21 @@ class LLParser(Parser):
                             added_something_flag |= _update_follow(
                                 follow_set, symbol_follow)
 
-        # Grammar error detection
+    def error_check(self):
+        """Raise GrammarError if the grammar is not LL(1).
+
+        This function finalizes the parser if it has not already been finalized.
+
+        If possible, this function will repair grammars which are not yet
+        LL(1) but can be made so (ie, grammars that are left-recursive) by
+        left-factoring. (This is not yet implemented.)
+
+        In general, you don't need to call this function. It will be called
+        during finalization.
+        """
+        if not self.finalized:
+            self.finalize()
+
         for symbol, rules in self.productions.items():
             # Detect the case that there are nonterminals without productions
             if len(rules) == 0:
@@ -174,10 +207,20 @@ class LLParser(Parser):
                                            "derivation for symbol {}".format(
                                            symbol.name))
 
-        # construct the parsing table
+    def construct_ptable(self):
+        """Construct the parse table for this parser.
+
+        This function finalizes the parser if it has not already been finalized.
+
+        In general, you don't need to call this function. It will be called
+        during finalization.
+        """
+        if not self.finalized:
+            self.finalize()
+
         for symbol, rules in self.productions.items():
             for rule,action in rules:
-                for term in self.first(rule): # either rule or symbol (GULP)
+                for term in self.first(rule):
                     self.ptable[symbol][term].append((rule,action))
                 if EPSILON in self.first(rule):
                     for term in self.follow(symbol):
@@ -308,6 +351,13 @@ class LLParser(Parser):
         effects in the parser - it will begin to fill out the production table
         with implicit symbols and will also add tokens to the lexer.
         """
+        # I'm not 100% happy with this function due to the fact that it has
+        # side effects and yet exists mostly as a helper function. It
+        # shouldn't really ever be called by an end user, and yet it is
+        # documented and 'protected' like it is meant to be useful to an end
+        # user. For now, I'll leave it, because it is *big mojo* (turns BNF
+        # rules in to symbolic productions - basically a mini-parser) and I
+        # wouldn't want to roll it back in to the addproduction() code.
         if self.finalized:
             raise ValueError("Can't symbolize a rule after finalizing the "
                              "parser.")
