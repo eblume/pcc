@@ -29,6 +29,9 @@ class LLTester(unittest.TestCase):
         """Remove the testing environment"""
         pass
 
+    # The test_first and test_follow tests come straight from the excercises
+    # in the Purple Dragon Book. Tee-hee.
+
     def test_first(self):
         """ll.py: Test FIRST set creation"""
         # Grammar 4.28 in Aho, Ullman et al (except NUM instead of id)
