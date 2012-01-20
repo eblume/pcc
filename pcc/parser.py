@@ -80,4 +80,48 @@ class Parser(metaclass=ABCMeta):
         """
         raise NotImplementedError("Attempt to call an abstract method.")
 
+class SyntaxTree:
+    """Abstract representation of the parse tree created by parsing input.
+
+    The parser will create this object and return it as its result.
+
+    This object is callable (like a function) with no arguments, which will
+    return the result of processing the semantic actions of the parse tree.
+    """
+
+    def __init__(self,root):
+        self.root = root
+
+    def __call__(self):
+        """Process the semantic actions of this parse tree."""
+        return self.root.action()
+
+class SyntaxNode:
+    """Abstract representation of a single derivation when parsing input.
+
+    `action` is the semantic action that will be executed by calling the
+    ``action()`` method of this object. It may also be any non-collable value,
+    in which case it will be treated as if the semantic action returned that
+    value directly.
+
+    `children` should be an iterable (usually a list or tuple) of SyntaxNode
+    objects, or possibly None (indicating that there are no children). This
+    will be stored in a tuple in a field called ``children`` on this node, which
+    may be modified during optimization routines. If there are no children,
+    this tuple will be empty.
+    """
+
+    def __init__(self,action,children=None):
+        self._action = action
+        if children:
+            self.children = tuple(children)
+        else:
+            self.children = tuple()
+
+    def action(self):
+        if hasattr(self._action,'__call__'):
+            return self._action([c.action() for c in self.children])
+        else:
+            return self._action
+
 

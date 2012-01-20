@@ -19,7 +19,8 @@
 # along with pcc, in a file called COPYING.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-from pcc.parser import Parser, GrammarError, ParsingError
+from pcc.parser import (Parser, GrammarError, ParsingError, SyntaxTree,
+                        SyntaxNode)
 from pcc.symbols import (Symbol, Token, EOF, EPSILON, SymbolString, Lexeme,
                          SYMBOL_MATCH_RULE, TOKEN_MATCH_RULE)
 from pcc.stringtools import unique_string
@@ -37,7 +38,7 @@ class LLParser(Parser):
         self.literals = {}
         self.terminals = {t for t in lexer.tokens.values()} | {EOF}
 
-    def addproduction(self,symbol,rule,action, start_production=False):
+    def addproduction(self,symbol,rule,action=None,start_production=False):
         """Add a production to generate `symbol` using `rule`.
 
         For convenience, `symbol` is a string which will be the name of the
@@ -50,7 +51,9 @@ class LLParser(Parser):
         for this production. The argument is a list, each element being the
         value returned by the semantic action of the produciton generating that
         element's corresponding part of the rule. In the case of terminal
-        symbols, the exact input matched will be used in the argument.
+        symbols, the exact input matched will be used in the argument. Also,
+        action may be any other sort of value (including None), in which case
+        that value will be used for upper-level derivations.
 
         It is common for `action` to be a lambda expression for simple
         grammars, but any sort of function may be used.
@@ -254,12 +257,18 @@ class LLParser(Parser):
         return self.FOLLOW[symbol]
 
     def parse(self,input):
-        """Use the recursive descent method to parse the input."""
+        """Use the recursive descent method to parse the input.
+
+        The result will be an instance of ``pcc.parser.SyntaxTree``, which
+        may be called with no arguments to retrieve the semantic action result
+        of the parse.
+        """
         if not self.finalized:
             self.finalize()
         lexer = _LexemeIterator(self.lexer,input)
         start_symbol, start_rule, start_action = self.start
-        return _rd_parse_rule(start_rule,start_action,lexer,self.ptable)
+        return SyntaxTree(_rd_parse_rule(
+                            start_rule,start_action,lexer,self.ptable))
 
     def symbolize(self,rule):
         """LLParser.symbolize(string) -> pcc.symbols.SymbolString
@@ -341,13 +350,13 @@ class LLParser(Parser):
         
 def _rd_parse_rule(rule,action,lexer,parse_table):
     """Recursive function to parse the input"""
-    input_values = []
+    children = []
     for symbol in rule:
         if symbol.terminal():
 
             if symbol == EPSILON:
                 # epsilon-production - treat like input, but consume nothing
-                input_values.append(None)
+                children.append(SyntaxNode(None))
                 continue
             
             next = lexer.poll()
@@ -358,7 +367,7 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
                     'position {}'.format( symbol.name, next.match,
                     next.line, next.position))
             
-            input_values.append(next.match)
+            children.append(SyntaxNode(next.match))
             continue
         else:
             #non-terminal symbol
@@ -379,14 +388,11 @@ def _rd_parse_rule(rule,action,lexer,parse_table):
                 pass
             new_rule,new_action = productions[0]
             # RECURSION
-            input_values.append(_rd_parse_rule(new_rule,new_action,lexer,
-                                parse_table))
+            children.append(_rd_parse_rule(new_rule,new_action,lexer,
+                            parse_table))
             continue
-    # Parsing complete, now perform the 'action'
-    if hasattr(action, '__call__'):
-        return action(input_values)
-    else:
-        return action
+    # Parsing complete, now construct the AST node
+    return SyntaxNode(action,children)
 
     
 class _LexemeIterator:

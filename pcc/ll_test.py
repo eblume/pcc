@@ -103,11 +103,11 @@ class LLTester(unittest.TestCase):
         p.ap('f',"'(' e ')'", lambda x: x[1])
         p.ap('f',"NUM", lambda x: int(x[0]))
     
-        self.assertEqual(p.parse("2+3*4"),14)
-        self.assertEqual(p.parse("5"),5)
-        self.assertEqual(p.parse("1+1+1+1+1+1+1"),7)
-        self.assertEqual(p.parse("(5+2)"),7)
-        self.assertEqual(p.parse("1+((((((((((3))))))))))"),4)
+        self.assertEqual(p.parse("2+3*4")(),14)
+        self.assertEqual(p.parse("5")(),5)
+        self.assertEqual(p.parse("1+1+1+1+1+1+1")(),7)
+        self.assertEqual(p.parse("(5+2)")(),7)
+        self.assertEqual(p.parse("1+((((((((((3))))))))))")(),4)
         
     def test_symbolize(self):
         """ll.py: Test converting a rule string in to a SymbolString"""
