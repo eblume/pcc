@@ -245,7 +245,20 @@ class LLParser(Parser):
 
         # Dynamic return to cut down execution time
         if symbols in self.FIRST:
-            return self.FIRST[symbols]
+            if self.FIRST[symbols] is None:
+                # For programmatic reasons, this error will always be raised
+                # when 'symbols' is the single nonterminal symbol that
+                # contained a left-recursion. If some edge case ends up
+                # disproving this, then the user might be a bit confused about
+                # being told that a symbol string has a recursion, but that will
+                # still be the most useful message in terms of error reporting.
+                raise GrammarError("Grammar contains a left recursion for the "
+                    "symbol '{}'".format(symbols))
+            else:
+                return self.FIRST[symbols]
+        else:
+            # mark this 'symbols' as 'In Progress'
+            self.FIRST[symbols] = None
 
         # Actual definition:
 
@@ -365,12 +378,12 @@ class LLParser(Parser):
         if self.finalized:
             raise ValueError("Can't symbolize a rule after finalizing the "
                              "parser.")
-        rule = rule.split()
-        if not rule:
+        split_rule = rule.split()
+        if not split_rule:
             return SymbolString((EPSILON,))
 
         result = []
-        for label in rule:
+        for label in split_rule:
             if label[0] == "'" and label[-1] == "'":
                 # String Literal
                 match_rule = re.escape(label[1:-1])
