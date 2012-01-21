@@ -149,20 +149,20 @@ class LLTester(unittest.TestCase):
         self.assertEqual(odd_token,s_string[1])
         self.assertNotEqual(odd_token,s_string[2])
 
-    def test_left_recursion(self):
-        """ll.py: Test elimination of left recursion"""
-        # This is the same as in test_grammar, but the grammar is the
-        # left-recursive form. It should be transformed to perform identically.
-        lexer = Lexer()
-        lexer.addtoken(name='NUM',rule=r'[0-9]+')
-        p = ll.LLParser(lexer)
-        p.ap('s',"e", lambda x: x[0], start_production=True)
-        p.ap('e'," e '+' t ", lambda x: x[0] + x[2])
-        p.ap('e'," t ", lambda x: x[0])
-        p.ap('t'," t '*' f ", lambda x: x[0] * x[2])
-        p.ap('t'," f ", lambda x: x[0])
-        p.ap('f'," '(' e ')' ", lambda x: x[1])
-        p.ap('f'," NUM ", lambda x: int(x[0]))
-
-        self._test_expression_grammar(p)
+    #def test_left_recursion(self):
+    #    """ll.py: Test elimination of left recursion"""
+    #    # This is the same as in test_grammar, but the grammar is the
+    #    # left-recursive form. It should be transformed to perform identically.
+    #    lexer = Lexer()
+    #    lexer.addtoken(name='NUM',rule=r'[0-9]+')
+    #    p = ll.LLParser(lexer)
+    #    p.ap('s',"e", lambda x: x[0], start_production=True)
+    #    p.ap('e'," e '+' t ", lambda x: x[0] + x[2])
+    #    p.ap('e'," t ", lambda x: x[0])
+    #    p.ap('t'," t '*' f ", lambda x: x[0] * x[2])
+    #    p.ap('t'," f ", lambda x: x[0])
+    #    p.ap('f'," '(' e ')' ", lambda x: x[1])
+    #    p.ap('f'," NUM ", lambda x: int(x[0]))
+    #
+    #    self._test_expression_grammar(p)
 
